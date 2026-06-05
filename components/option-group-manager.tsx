@@ -330,30 +330,33 @@ export function OptionGroupManager({
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
 
-    if (over && active.id !== over.id) {
-      const oldIndex = optionGroups.findIndex((g) => g.id === active.id)
-      const newIndex = optionGroups.findIndex((g) => g.id === over.id)
-      
-      const reordered = arrayMove(optionGroups, oldIndex, newIndex)
-      
-      // Update sortOrder for all reordered items
-      const updates = reordered.map((group, index) => ({
-        ...group,
-        sortOrder: index,
-      }))
-      
-      // Call the reorder callback if provided
-      if (onReorderOptionGroups) {
-        onReorderOptionGroups(updates)
-      }
-      
-      // Update each item's sortOrder in the API
-      for (let i = 0; i < updates.length; i++) {
-        if (updates[i].sortOrder !== optionGroups[i]?.sortOrder) {
-          await onUpdateOptionGroup(updates[i].id, { sortOrder: updates[i].sortOrder })
-        }
-      }
-    }
+    if (!over || active.id === over.id) return
+
+    const oldIndex = optionGroups.findIndex((g) => g.id === active.id)
+    const newIndex = optionGroups.findIndex((g) => g.id === over.id)
+    if (oldIndex === -1 || newIndex === -1) return
+
+    // Recompute sortOrder for every group based on its new position
+    const reordered = arrayMove(optionGroups, oldIndex, newIndex).map(
+      (group, index) => ({ ...group, sortOrder: index })
+    )
+
+    // Optimistic UI update so the new order reflects immediately
+    onReorderOptionGroups?.(reordered)
+
+    // Persist every group whose position actually changed. We compare each
+    // group against its OWN previous sortOrder (matched by id) so the new
+    // order survives navigation, re-renders, and import/export.
+    const changed = reordered.filter((group) => {
+      const original = optionGroups.find((g) => g.id === group.id)
+      return !original || original.sortOrder !== group.sortOrder
+    })
+
+    await Promise.all(
+      changed.map((group) =>
+        onUpdateOptionGroup(group.id, { sortOrder: group.sortOrder })
+      )
+    )
   }
 
   const getTypeLabel = (type: string) => {
@@ -406,7 +409,14 @@ export function OptionGroupManager({
       <Card className="flex flex-col">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-2">
-            <CardTitle className="text-lg">옵션 그룹</CardTitle>
+            <CardTitle className="text-lg">
+              옵션 그룹
+              {optionGroups.length > 0 && (
+                <span className="ml-2 text-sm font-normal text-muted-foreground">
+                  {optionGroups.length}
+                </span>
+              )}
+            </CardTitle>
             <div className="flex gap-1">
               {optionGroups.length > 0 && targetMenus.length > 0 && (
                 <Button
@@ -540,6 +550,12 @@ export function OptionGroupManager({
             {optionGroups.length === 0 && !isCreating && (
               <p className="text-sm text-muted-foreground text-center py-4">
                 옵션 그룹이 없습니다. 새 그룹을 생성하세요.
+              </p>
+            )}
+            {optionGroups.length > 1 && (
+              <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                <GripVertical className="h-3 w-3" />
+                드래그하여 순서를 변경할 수 있습니다 (자동 저장)
               </p>
             )}
             {optionGroups.length > 0 && (
