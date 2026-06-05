@@ -8,7 +8,14 @@ import { OptionGroupManager } from "@/components/option-group-manager"
 import { OptionManager } from "@/components/option-manager"
 import { MenuDetail } from "@/components/menu-detail"
 import { JsonImportExport } from "@/components/json-import-export"
-import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { ChevronRight, Eye, Store as StoreIcon, Home } from "lucide-react"
 import type { Store, Menu, OptionGroup, Option, CatalogData } from "@/lib/types"
 import {
   apiGetStores,
@@ -53,6 +60,9 @@ export default function MenuManagementPage() {
 
   // Loading state
   const [isLoading, setIsLoading] = useState(false)
+
+  // Menu preview dialog state
+  const [previewOpen, setPreviewOpen] = useState(false)
 
   // Load stores on mount
   useEffect(() => {
@@ -507,39 +517,132 @@ export default function MenuManagementPage() {
     }
   }
 
-  return (
-    <div className="px-4 py-6 lg:px-8">
-      {/* Page heading */}
-      <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            메뉴 관리
-          </h1>
-          <p className="text-sm text-muted-foreground">매장 / 메뉴 / 옵션 관리</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {selectedStore && (
-            <Badge variant="outline" className="text-xs">
-              매장: {selectedStore.name}
-            </Badge>
-          )}
-          {selectedMenu && (
-            <Badge variant="outline" className="text-xs">
-              메뉴: {selectedMenu.name}
-            </Badge>
-          )}
-          {selectedOptionGroup && (
-            <Badge variant="outline" className="text-xs">
-              그룹: {selectedOptionGroup.name}
-            </Badge>
-          )}
-        </div>
-      </div>
+  // Breadcrumb navigation: clicking a level clears deeper selections
+  const goToRoot = () => {
+    setSelectedStore(null)
+  }
+  const goToStore = () => {
+    setSelectedMenu(null)
+    setSelectedOptionGroup(null)
+  }
+  const goToMenu = () => {
+    setSelectedOptionGroup(null)
+  }
 
-      {/* Main content */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-        {/* Left column - Store & Menu lists */}
-        <div className="space-y-6 lg:col-span-3">
+  return (
+    <div className="flex min-h-screen flex-col">
+      {/* Sticky toolbar */}
+      <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <div className="flex flex-col gap-3 px-4 py-4 lg:px-8">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h1 className="text-xl font-semibold tracking-tight text-foreground">
+                메뉴 관리
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                매장에서 메뉴, 옵션 그룹, 옵션까지 단계별로 관리하세요
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!selectedMenu}
+                onClick={() => setPreviewOpen(true)}
+                title={
+                  selectedMenu
+                    ? "선택한 메뉴 미리보기"
+                    : "메뉴를 선택하면 미리보기를 볼 수 있습니다"
+                }
+              >
+                <Eye className="mr-2 h-4 w-4" />
+                미리보기
+              </Button>
+              <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>메뉴 미리보기</DialogTitle>
+                  </DialogHeader>
+                  <div className="max-h-[70vh] overflow-y-auto">
+                    <MenuDetail
+                      menu={selectedMenu}
+                      optionGroups={optionGroups}
+                      options={options}
+                      linkableMenus={linkableMenus}
+                    />
+                  </div>
+                </DialogContent>
+              </Dialog>
+              <JsonImportExport
+                onExport={handleExport}
+                onImport={handleImport}
+                isLoading={isLoading}
+                compact
+              />
+            </div>
+          </div>
+
+          {/* Breadcrumb / drill-down path */}
+          <nav
+            aria-label="탐색 경로"
+            className="flex flex-wrap items-center gap-1 text-sm"
+          >
+            <button
+              type="button"
+              onClick={goToRoot}
+              className="flex items-center gap-1 rounded-md px-2 py-1 font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <Home className="h-3.5 w-3.5" />
+              전체 매장
+            </button>
+            {selectedStore && (
+              <>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                <button
+                  type="button"
+                  onClick={goToStore}
+                  className={`flex items-center gap-1 rounded-md px-2 py-1 transition-colors hover:bg-muted ${
+                    !selectedMenu
+                      ? "font-semibold text-foreground"
+                      : "font-medium text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <StoreIcon className="h-3.5 w-3.5" />
+                  {selectedStore.name}
+                </button>
+              </>
+            )}
+            {selectedMenu && (
+              <>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                <button
+                  type="button"
+                  onClick={goToMenu}
+                  className={`rounded-md px-2 py-1 transition-colors hover:bg-muted ${
+                    !selectedOptionGroup
+                      ? "font-semibold text-foreground"
+                      : "font-medium text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {selectedMenu.name}
+                </button>
+              </>
+            )}
+            {selectedOptionGroup && (
+              <>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                <span className="rounded-md px-2 py-1 font-semibold text-foreground">
+                  {selectedOptionGroup.name}
+                </span>
+              </>
+            )}
+          </nav>
+        </div>
+      </header>
+
+      {/* Drill-down columns: 매장 → 메뉴 → 옵션 그룹 → 옵션 */}
+      <div className="flex-1 px-4 py-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           <StoreManager
             stores={stores}
             selectedStore={selectedStore}
@@ -559,10 +662,6 @@ export default function MenuManagementPage() {
             onDeleteMenu={handleDeleteMenu}
             isLoading={isLoading}
           />
-        </div>
-
-        {/* Center column - Option Groups & Options */}
-        <div className="space-y-6 lg:col-span-5">
           <OptionGroupManager
             optionGroups={optionGroups}
             selectedOptionGroup={selectedOptionGroup}
@@ -589,21 +688,6 @@ export default function MenuManagementPage() {
             onUpdateOption={handleUpdateOption}
             onDeleteOption={handleDeleteOption}
             onReorderOptions={handleReorderOptions}
-            isLoading={isLoading}
-          />
-        </div>
-
-        {/* Right column - Menu Detail & Import/Export */}
-        <div className="space-y-6 lg:col-span-4">
-          <MenuDetail
-            menu={selectedMenu}
-            optionGroups={optionGroups}
-            options={options}
-            linkableMenus={linkableMenus}
-          />
-          <JsonImportExport
-            onExport={handleExport}
-            onImport={handleImport}
             isLoading={isLoading}
           />
         </div>

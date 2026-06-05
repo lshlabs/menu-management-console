@@ -30,12 +30,15 @@ interface JsonImportExportProps {
     mode: "merge" | "replace"
   ) => Promise<{ imported: number; errors: string[] }>
   isLoading: boolean
+  /** When true, render only the action buttons (no Card wrapper) for use in toolbars. */
+  compact?: boolean
 }
 
 export function JsonImportExport({
   onExport,
   onImport,
   isLoading,
+  compact = false,
 }: JsonImportExportProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [importDialogOpen, setImportDialogOpen] = useState(false)
@@ -123,43 +126,53 @@ export function JsonImportExport({
     }
   }
 
+  const actionButtons = (
+    <>
+      <Button
+        variant="outline"
+        size={compact ? "sm" : "default"}
+        onClick={handleExport}
+        disabled={isLoading}
+        className={compact ? undefined : "flex-1"}
+      >
+        <Download className="h-4 w-4 mr-2" />
+        내보내기
+      </Button>
+      <Button
+        variant="outline"
+        size={compact ? "sm" : "default"}
+        onClick={() => fileInputRef.current?.click()}
+        disabled={isLoading}
+        className={compact ? undefined : "flex-1"}
+      >
+        <Upload className="h-4 w-4 mr-2" />
+        가져오기
+      </Button>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json"
+        onChange={handleFileSelect}
+        className="hidden"
+      />
+    </>
+  )
+
   return (
     <>
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <FileJson className="h-5 w-5" />
-            JSON 가져오기 / 내보내기
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex gap-3">
-          <Button
-            variant="outline"
-            onClick={handleExport}
-            disabled={isLoading}
-            className="flex-1"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            내보내기
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isLoading}
-            className="flex-1"
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            가져오기
-          </Button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".json"
-            onChange={handleFileSelect}
-            className="hidden"
-          />
-        </CardContent>
-      </Card>
+      {compact ? (
+        <div className="flex items-center gap-2">{actionButtons}</div>
+      ) : (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <FileJson className="h-5 w-5" />
+              JSON 가져오기 / 내보내기
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex gap-3">{actionButtons}</CardContent>
+        </Card>
+      )}
 
       <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
         <DialogContent className="max-w-md">
