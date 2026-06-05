@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { Toaster, toast } from "sonner"
+import { toast } from "sonner"
 import { StoreManager } from "@/components/store-manager"
 import { MenuManager } from "@/components/menu-manager"
 import { OptionGroupManager } from "@/components/option-group-manager"
@@ -508,114 +508,106 @@ export default function MenuManagementPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Toaster position="top-right" richColors />
-
-      {/* Header */}
-      <header className="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-semibold text-foreground">배달 API 관리 콘솔</h1>
-              <p className="text-sm text-muted-foreground">
-                메뉴 / 옵션 관리
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              {selectedStore && (
-                <Badge variant="outline" className="text-xs">
-                  매장: {selectedStore.name}
-                </Badge>
-              )}
-              {selectedMenu && (
-                <Badge variant="outline" className="text-xs">
-                  메뉴: {selectedMenu.name}
-                </Badge>
-              )}
-              {selectedOptionGroup && (
-                <Badge variant="outline" className="text-xs">
-                  그룹: {selectedOptionGroup.name}
-                </Badge>
-              )}
-            </div>
-          </div>
+    <div className="px-4 py-6 lg:px-8">
+      {/* Page heading */}
+      <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            메뉴 관리
+          </h1>
+          <p className="text-sm text-muted-foreground">매장 / 메뉴 / 옵션 관리</p>
         </div>
-      </header>
+        <div className="flex flex-wrap items-center gap-2">
+          {selectedStore && (
+            <Badge variant="outline" className="text-xs">
+              매장: {selectedStore.name}
+            </Badge>
+          )}
+          {selectedMenu && (
+            <Badge variant="outline" className="text-xs">
+              메뉴: {selectedMenu.name}
+            </Badge>
+          )}
+          {selectedOptionGroup && (
+            <Badge variant="outline" className="text-xs">
+              그룹: {selectedOptionGroup.name}
+            </Badge>
+          )}
+        </div>
+      </div>
 
       {/* Main content */}
-      <main className="container mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left column - Store & Menu lists */}
-          <div className="lg:col-span-3 space-y-6">
-            <StoreManager
-              stores={stores}
-              selectedStore={selectedStore}
-              onSelectStore={setSelectedStore}
-              onCreateStore={handleCreateStore}
-              onUpdateStore={handleUpdateStore}
-              onDeleteStore={handleDeleteStore}
-              isLoading={isLoading}
-            />
-            <MenuManager
-              menus={menus}
-              selectedMenu={selectedMenu}
-              storeId={selectedStore?.id || null}
-              onSelectMenu={setSelectedMenu}
-              onCreateMenu={handleCreateMenu}
-              onUpdateMenu={handleUpdateMenu}
-              onDeleteMenu={handleDeleteMenu}
-              isLoading={isLoading}
-            />
-          </div>
-
-          {/* Center column - Option Groups & Options */}
-          <div className="lg:col-span-5 space-y-6">
-            <OptionGroupManager
-              optionGroups={optionGroups}
-              selectedOptionGroup={selectedOptionGroup}
-              selectedMenu={selectedMenu}
-              targetMenus={targetMenus}
-              onSelectOptionGroup={setSelectedOptionGroup}
-              onCreateOptionGroup={handleCreateOptionGroup}
-              onUpdateOptionGroup={handleUpdateOptionGroup}
-              onDeleteOptionGroup={handleDeleteOptionGroup}
-              onDuplicateOptionGroup={handleDuplicateOptionGroup}
-              onDuplicateAllOptionGroups={handleDuplicateAllOptionGroups}
-              onReorderOptionGroups={handleReorderOptionGroups}
-              isLoading={isLoading}
-            />
-            <OptionManager
-              options={
-                selectedOptionGroup
-                  ? options.get(selectedOptionGroup.id) || []
-                  : []
-              }
-              selectedOptionGroup={selectedOptionGroup}
-              linkableMenus={linkableMenus}
-              onCreateOption={handleCreateOption}
-              onUpdateOption={handleUpdateOption}
-              onDeleteOption={handleDeleteOption}
-              onReorderOptions={handleReorderOptions}
-              isLoading={isLoading}
-            />
-          </div>
-
-          {/* Right column - Menu Detail & Import/Export */}
-          <div className="lg:col-span-4 space-y-6">
-            <MenuDetail
-              menu={selectedMenu}
-              optionGroups={optionGroups}
-              options={options}
-              linkableMenus={linkableMenus}
-            />
-            <JsonImportExport
-              onExport={handleExport}
-              onImport={handleImport}
-              isLoading={isLoading}
-            />
-          </div>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        {/* Left column - Store & Menu lists */}
+        <div className="space-y-6 lg:col-span-3">
+          <StoreManager
+            stores={stores}
+            selectedStore={selectedStore}
+            onSelectStore={setSelectedStore}
+            onCreateStore={handleCreateStore}
+            onUpdateStore={handleUpdateStore}
+            onDeleteStore={handleDeleteStore}
+            isLoading={isLoading}
+          />
+          <MenuManager
+            menus={menus}
+            selectedMenu={selectedMenu}
+            storeId={selectedStore?.id || null}
+            onSelectMenu={setSelectedMenu}
+            onCreateMenu={handleCreateMenu}
+            onUpdateMenu={handleUpdateMenu}
+            onDeleteMenu={handleDeleteMenu}
+            isLoading={isLoading}
+          />
         </div>
-      </main>
+
+        {/* Center column - Option Groups & Options */}
+        <div className="space-y-6 lg:col-span-5">
+          <OptionGroupManager
+            optionGroups={optionGroups}
+            selectedOptionGroup={selectedOptionGroup}
+            selectedMenu={selectedMenu}
+            targetMenus={targetMenus}
+            onSelectOptionGroup={setSelectedOptionGroup}
+            onCreateOptionGroup={handleCreateOptionGroup}
+            onUpdateOptionGroup={handleUpdateOptionGroup}
+            onDeleteOptionGroup={handleDeleteOptionGroup}
+            onDuplicateOptionGroup={handleDuplicateOptionGroup}
+            onDuplicateAllOptionGroups={handleDuplicateAllOptionGroups}
+            onReorderOptionGroups={handleReorderOptionGroups}
+            isLoading={isLoading}
+          />
+          <OptionManager
+            options={
+              selectedOptionGroup
+                ? options.get(selectedOptionGroup.id) || []
+                : []
+            }
+            selectedOptionGroup={selectedOptionGroup}
+            linkableMenus={linkableMenus}
+            onCreateOption={handleCreateOption}
+            onUpdateOption={handleUpdateOption}
+            onDeleteOption={handleDeleteOption}
+            onReorderOptions={handleReorderOptions}
+            isLoading={isLoading}
+          />
+        </div>
+
+        {/* Right column - Menu Detail & Import/Export */}
+        <div className="space-y-6 lg:col-span-4">
+          <MenuDetail
+            menu={selectedMenu}
+            optionGroups={optionGroups}
+            options={options}
+            linkableMenus={linkableMenus}
+          />
+          <JsonImportExport
+            onExport={handleExport}
+            onImport={handleImport}
+            isLoading={isLoading}
+          />
+        </div>
+      </div>
     </div>
   )
 }

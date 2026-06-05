@@ -4,6 +4,11 @@ import type {
   OptionGroup,
   Option,
   CatalogData,
+  ApiConfig,
+  GeneratedOrder,
+  GeneratedOrderItem,
+  GeneratedOrderOption,
+  OrderRecord,
 } from "./types"
 
 // In-memory data store
@@ -11,6 +16,8 @@ let stores: Store[] = []
 let menus: Menu[] = []
 let optionGroups: OptionGroup[] = []
 let options: Option[] = []
+let apiConfigs: ApiConfig[] = []
+let orderRecords: OrderRecord[] = []
 
 const generateId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 const timestamp = () => new Date().toISOString()
@@ -376,4 +383,230 @@ export async function apiGetTargetMenus(
       (m.type === "MAIN" || m.type === "SET") &&
       m.id !== excludeMenuId
   )
+}
+
+// ---------------------------------------------------------------------------
+// API Configuration (CRUD)
+// ---------------------------------------------------------------------------
+export async function apiGetApiConfigs(): Promise<ApiConfig[]> {
+  await delay()
+  return [...apiConfigs]
+}
+
+export async function apiCreateApiConfig(
+  data: Omit<ApiConfig, "id" | "createdAt" | "updatedAt">
+): Promise<ApiConfig> {
+  await delay()
+  // If this config is set active, deactivate the others
+  if (data.isActive) {
+    apiConfigs = apiConfigs.map((c) => ({ ...c, isActive: false }))
+  }
+  const config: ApiConfig = {
+    ...data,
+    id: generateId(),
+    createdAt: timestamp(),
+    updatedAt: timestamp(),
+  }
+  apiConfigs.push(config)
+  return config
+}
+
+export async function apiUpdateApiConfig(
+  id: string,
+  data: Partial<Omit<ApiConfig, "id" | "createdAt" | "updatedAt">>
+): Promise<ApiConfig> {
+  await delay()
+  const index = apiConfigs.findIndex((c) => c.id === id)
+  if (index === -1) throw new Error("ApiConfig not found")
+  // Enforce a single active config
+  if (data.isActive) {
+    apiConfigs = apiConfigs.map((c) =>
+      c.id === id ? c : { ...c, isActive: false }
+    )
+  }
+  apiConfigs[index] = { ...apiConfigs[index], ...data, updatedAt: timestamp() }
+  return apiConfigs[index]
+}
+
+export async function apiDeleteApiConfig(id: string): Promise<void> {
+  await delay()
+  const index = apiConfigs.findIndex((c) => c.id === id)
+  if (index === -1) throw new Error("ApiConfig not found")
+  apiConfigs.splice(index, 1)
+}
+
+export async function apiGetActiveApiConfig(): Promise<ApiConfig | null> {
+  await delay(100)
+  return apiConfigs.find((c) => c.isActive) ?? null
+}
+
+// ---------------------------------------------------------------------------
+// Order generation & transmission
+// ---------------------------------------------------------------------------
+const pick = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)]
+
+const shuffle = <T>(arr: T[]): T[] => {
+  const copy = [...arr]
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[copy[i], copy[j]] = [copy[j], copy[i]]
+  }
+  return copy
+}
+
+// Build a single order item from a MAIN/SET menu, respecting option-group rules
+function buildOrderItem(menu: Menu): GeneratedOrderItem {
+  const groups = optionGroups
+    .filter((og) => og.menuId === menu.id && og.isAvailable)
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+
+  const selectedOptions: GeneratedOrderOption[] = []
+
+  for (const group of groups) {
+    const available = options.filter(
+      (o) => o.optionGroupId === group.id && o.isAvailable
+    )
+    if (available.length === 0) continue
+
+    // Determine how many options to select within the allowed range
+    const min = Math.max(group.isRequired ? Math.max(group.minSelect, 1) : group.minSelect, 0)
+    const max = Math.min(group.maxSelect || 1, available.length)
+    if (max < 1 && !group.isRequired) continue
+
+    const count = Math.max(
+      min,
+      Math.min(max, Math.floor(Math.random() * (max - min + 1)) + min)
+    )
+    const chosen = shuffle(available).slice(0, Math.max(count, group.isRequired ? 1 : 0))
+
+    for (const opt of chosen) {
+      selectedOptions.push({
+        groupName: group.name,
+        optionName: opt.name,
+        effect: opt.effect,
+        additionalPrice: opt.additionalPrice,
+      })
+    }
+  }
+
+  const quantity = Math.floor(Math.random() * 2) + 1
+  const optionsTotal = selectedOptions.reduce((sum, o) => sum + o.additionalPrice, 0)
+  const itemTotal = (menu.basePrice + optionsTotal) * quantity
+
+  return {
+    menuId: menu.id,
+    menuName: menu.name,
+    type: menu.type,
+    basePrice: menu.basePrice,
+    quantity,
+    selectedOptions,
+    itemTotal,
+  }
+}
+
+// Generate a randomized but valid order combination from a store's catalog,
+// simulating an AI that composes orders from the menu data.
+export async function apiGenerateOrder(
+  storeId: string,
+  generatedBy = "mock-generator"
+): Promise<GeneratedOrder> {
+  await delay(700)
+  const store = stores.find((s) => s.id === storeId)
+  if (!store) throw new Error("매장을 찾을 수 없습니다")
+
+  const orderableMenus = menus.filter(
+    (m) =>
+      m.storeId === storeId &&
+      m.isAvailable &&
+      (m.type === "MAIN" || m.type === "SET")
+  )
+  if (orderableMenus.length === 0) {
+    throw new Error("주문 가능한 메뉴(메인/세트)가 없습니다")
+  }
+
+  const itemCount = Math.min(
+    orderableMenus.length,
+    Math.floor(Math.random() * 3) + 1
+  )
+  const chosenMenus = shuffle(orderableMenus).slice(0, itemCount)
+  const items = chosenMenus.map(buildOrderItem)
+  const totalPrice = items.reduce((sum, item) => sum + item.itemTotal, 0)
+
+  return {
+    orderId: generateId(),
+    storeId: store.id,
+    storeName: store.name,
+    createdAt: timestamp(),
+    generatedBy,
+    items,
+    totalPrice,
+  }
+}
+
+// Simulate transmitting an order to the configured endpoint and record the result
+export async function apiSendOrder(
+  order: GeneratedOrder
+): Promise<OrderRecord> {
+  await delay(600)
+  const payload = JSON.stringify(order, null, 2)
+  const active = apiConfigs.find((c) => c.isActive)
+
+  let record: OrderRecord
+
+  if (!active) {
+    record = {
+      id: generateId(),
+      createdAt: timestamp(),
+      status: "error",
+      httpStatus: 400,
+      storeName: order.storeName,
+      payload,
+      message: "활성화된 API 설정이 없습니다. 'API 관리'에서 설정을 추가하세요.",
+    }
+  } else if (!order.items.length) {
+    record = {
+      id: generateId(),
+      createdAt: timestamp(),
+      status: "error",
+      httpStatus: 422,
+      storeName: order.storeName,
+      payload,
+      message: "전송할 주문 항목이 없습니다.",
+    }
+  } else {
+    // Simulate a mostly-successful network call
+    const ok = Math.random() > 0.15
+    record = ok
+      ? {
+          id: generateId(),
+          createdAt: timestamp(),
+          status: "success",
+          httpStatus: 200,
+          storeName: order.storeName,
+          payload,
+          message: `OK - ${active.model} (${active.name}) 으로 전송됨`,
+        }
+      : {
+          id: generateId(),
+          createdAt: timestamp(),
+          status: "error",
+          httpStatus: 502,
+          storeName: order.storeName,
+          payload,
+          message: "Bad Gateway - 엔드포인트 응답 없음",
+        }
+  }
+
+  orderRecords = [record, ...orderRecords]
+  return record
+}
+
+export async function apiGetOrderRecords(): Promise<OrderRecord[]> {
+  await delay(100)
+  return [...orderRecords]
+}
+
+export async function apiClearOrderRecords(): Promise<void> {
+  await delay(100)
+  orderRecords = []
 }
