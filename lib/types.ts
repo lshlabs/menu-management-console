@@ -57,3 +57,60 @@ export interface CatalogData {
   optionGroups: OptionGroup[]
   options: Option[]
 }
+
+// API configuration for the AI order-generation endpoint
+export interface ApiConfig {
+  id: string
+  name: string
+  provider: string
+  endpoint: string
+  model: string
+  apiKey: string
+  temperature: number
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+// A single selected option inside a generated order item
+export interface GeneratedOrderOption {
+  groupName: string
+  optionName: string
+  effect: OptionEffect
+  additionalPrice: number
+}
+
+// A single menu line inside a generated order
+export interface GeneratedOrderItem {
+  menuId: string
+  menuName: string
+  type: MenuType
+  basePrice: number
+  quantity: number
+  selectedOptions: GeneratedOrderOption[]
+  itemTotal: number
+}
+
+// The full generated order combination (JSON payload)
+export interface GeneratedOrder {
+  orderId: string
+  storeId: string
+  storeName: string
+  createdAt: string
+  generatedBy: string
+  items: GeneratedOrderItem[]
+  totalPrice: number
+}
+
+export type OrderRecordStatus = "success" | "error"
+
+// A record of a transmitted order
+export interface OrderRecord {
+  id: string
+  createdAt: string
+  status: OrderRecordStatus
+  httpStatus: number
+  storeName: string
+  payload: string
+  message: string
+}
