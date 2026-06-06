@@ -76,7 +76,7 @@ export function StoreManager({
   }
 
   return (
-    <Card className="flex flex-col">
+    <Card className="flex h-full flex-col">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">

@@ -36,7 +36,7 @@ export function MenuDetail({
 
   if (!menu) {
     return (
-      <Card className="flex items-center justify-center min-h-[200px]">
+      <Card className="flex h-full items-center justify-center min-h-[200px]">
         <p className="text-sm text-muted-foreground">
           메뉴를 선택하면 상세 정보가 표시됩니다
         </p>
@@ -47,7 +47,7 @@ export function MenuDetail({
   const canHaveOptions = menu.type === "MAIN" || menu.type === "SET"
 
   return (
-    <Card className="flex flex-col">
+    <Card className="flex h-full flex-col">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">메뉴 상세</CardTitle>

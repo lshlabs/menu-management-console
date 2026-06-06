@@ -181,7 +181,7 @@ export function MenuManager({
 
   if (!storeId) {
     return (
-      <Card className="flex items-center justify-center min-h-[200px]">
+      <Card className="flex h-full items-center justify-center min-h-[200px]">
         <p className="text-sm text-muted-foreground">
           매장을 선택하면 메뉴가 표시됩니다
         </p>
@@ -190,7 +190,7 @@ export function MenuManager({
   }
 
   return (
-    <Card className="flex flex-col">
+    <Card className="flex h-full flex-col">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">

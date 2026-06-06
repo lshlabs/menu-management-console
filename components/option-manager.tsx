@@ -317,7 +317,7 @@ export function OptionManager({
 
   if (!selectedOptionGroup) {
     return (
-      <Card className="flex items-center justify-center min-h-[200px]">
+      <Card className="flex h-full items-center justify-center min-h-[200px]">
         <p className="text-sm text-muted-foreground">
           옵션 그룹을 선택하면 옵션이 표시됩니다
         </p>
@@ -326,7 +326,7 @@ export function OptionManager({
   }
 
   return (
-    <Card className="flex flex-col">
+    <Card className="flex h-full flex-col">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">

@@ -386,7 +386,7 @@ export function OptionGroupManager({
 
   if (!canHaveOptionGroups) {
     return (
-      <Card className="flex flex-col">
+      <Card className="flex h-full flex-col">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg">옵션 그룹</CardTitle>
         </CardHeader>
@@ -406,7 +406,7 @@ export function OptionGroupManager({
 
   return (
     <>
-      <Card className="flex flex-col">
+      <Card className="flex h-full flex-col">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-2">
             <CardTitle className="text-lg">

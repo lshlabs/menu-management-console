@@ -9,13 +9,19 @@ import { OptionManager } from "@/components/option-manager"
 import { MenuDetail } from "@/components/menu-detail"
 import { JsonImportExport } from "@/components/json-import-export"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { ChevronRight, Eye, Store as StoreIcon, Home } from "lucide-react"
+import { ChevronRight, Store as StoreIcon, Plus, Trash2 } from "lucide-react"
+import { cn } from "@/lib/utils"
 import type { Store, Menu, OptionGroup, Option, CatalogData } from "@/lib/types"
 import {
   apiGetStores,
@@ -61,8 +67,16 @@ export default function MenuManagementPage() {
   // Loading state
   const [isLoading, setIsLoading] = useState(false)
 
-  // Menu preview dialog state
-  const [previewOpen, setPreviewOpen] = useState(false)
+  // New store dialog state
+  const [storeDialogOpen, setStoreDialogOpen] = useState(false)
+  const [newStoreForm, setNewStoreForm] = useState({
+    name: "",
+    address: "",
+    isActive: true,
+  })
+
+  // Delete store confirmation dialog state
+  const [deleteStoreOpen, setDeleteStoreOpen] = useState(false)
 
   // Load stores on mount
   useEffect(() => {
@@ -518,15 +532,55 @@ export default function MenuManagementPage() {
   }
 
   // Breadcrumb navigation: clicking a level clears deeper selections
-  const goToRoot = () => {
-    setSelectedStore(null)
-  }
   const goToStore = () => {
     setSelectedMenu(null)
     setSelectedOptionGroup(null)
   }
   const goToMenu = () => {
     setSelectedOptionGroup(null)
+  }
+
+  // New store dialog handlers
+  const openStoreDialog = () => {
+    setNewStoreForm({ name: "", address: "", isActive: true })
+    setStoreDialogOpen(true)
+  }
+
+  const submitNewStore = async () => {
+    if (!newStoreForm.name.trim()) return
+    await handleCreateStore(newStoreForm)
+    setStoreDialogOpen(false)
+  }
+
+  const confirmDeleteStore = async () => {
+    if (!selectedStore) return
+    await handleDeleteStore(selectedStore.id)
+    setDeleteStoreOpen(false)
+  }
+
+  // Miller column depth: which level is the user currently focused on?
+  // 0 = stores, 1 = menus, 2 = option groups, 3 = options, 4 = detail
+  const activeColumn = selectedOptionGroup
+    ? 3
+    : selectedMenu
+      ? 2
+      : selectedStore
+        ? 1
+        : 0
+
+  // Dynamic flex sizing for Miller columns. Completed (left) columns shrink,
+  // the active column expands. Detail panel always shown as the last column.
+  const colClass = (index: number) => {
+    const isActive = index === activeColumn
+    const isCompleted = index < activeColumn
+    return cn(
+      "min-w-0 shrink-0 transition-[flex-grow,flex-basis,width] duration-300 ease-in-out",
+      isActive
+        ? "lg:flex-[2.2] lg:basis-0"
+        : isCompleted
+          ? "lg:flex-[0.8] lg:basis-0"
+          : "lg:flex-1 lg:basis-0"
+    )
   }
 
   return (
@@ -547,32 +601,17 @@ export default function MenuManagementPage() {
               <Button
                 variant="outline"
                 size="sm"
-                disabled={!selectedMenu}
-                onClick={() => setPreviewOpen(true)}
+                disabled={!selectedStore}
+                onClick={() => setDeleteStoreOpen(true)}
                 title={
-                  selectedMenu
-                    ? "선택한 메뉴 미리보기"
-                    : "메뉴를 선택하면 미리보기를 볼 수 있습니다"
+                  selectedStore
+                    ? "선택한 매장 삭제"
+                    : "매장을 선택하면 삭제할 수 있습니다"
                 }
               >
-                <Eye className="mr-2 h-4 w-4" />
-                미리보기
+                <Trash2 className="mr-2 h-4 w-4" />
+                매장 삭제
               </Button>
-              <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-                <DialogContent className="max-w-2xl">
-                  <DialogHeader>
-                    <DialogTitle>메뉴 미리보기</DialogTitle>
-                  </DialogHeader>
-                  <div className="max-h-[70vh] overflow-y-auto">
-                    <MenuDetail
-                      menu={selectedMenu}
-                      optionGroups={optionGroups}
-                      options={options}
-                      linkableMenus={linkableMenus}
-                    />
-                  </div>
-                </DialogContent>
-              </Dialog>
               <JsonImportExport
                 onExport={handleExport}
                 onImport={handleImport}
@@ -582,6 +621,45 @@ export default function MenuManagementPage() {
             </div>
           </div>
 
+          {/* Store tabs */}
+          <div
+            role="tablist"
+            aria-label="매장 목록"
+            className="flex items-center gap-1 overflow-x-auto pb-1"
+          >
+            {stores.map((store) => {
+              const isSelected = selectedStore?.id === store.id
+              return (
+                <button
+                  key={store.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={isSelected}
+                  onClick={() => setSelectedStore(store)}
+                  className={cn(
+                    "flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm transition-colors",
+                    isSelected
+                      ? "border-primary bg-primary/10 font-semibold text-foreground"
+                      : "border-transparent text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  <StoreIcon className="h-3.5 w-3.5" />
+                  {store.name}
+                </button>
+              )
+            })}
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8 shrink-0"
+              onClick={openStoreDialog}
+              title="새 매장 추가"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="sr-only">새 매장 추가</span>
+            </Button>
+          </div>
+
           {/* Breadcrumb / drill-down path */}
           <nav
             aria-label="탐색 경로"
@@ -589,29 +667,17 @@ export default function MenuManagementPage() {
           >
             <button
               type="button"
-              onClick={goToRoot}
-              className="flex items-center gap-1 rounded-md px-2 py-1 font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              onClick={goToStore}
+              className={cn(
+                "flex items-center gap-1 rounded-md px-2 py-1 transition-colors hover:bg-muted",
+                !selectedMenu
+                  ? "font-semibold text-foreground"
+                  : "font-medium text-muted-foreground hover:text-foreground"
+              )}
             >
-              <Home className="h-3.5 w-3.5" />
-              전체 매장
+              <StoreIcon className="h-3.5 w-3.5" />
+              {selectedStore ? selectedStore.name : "매장 미선택"}
             </button>
-            {selectedStore && (
-              <>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                <button
-                  type="button"
-                  onClick={goToStore}
-                  className={`flex items-center gap-1 rounded-md px-2 py-1 transition-colors hover:bg-muted ${
-                    !selectedMenu
-                      ? "font-semibold text-foreground"
-                      : "font-medium text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  <StoreIcon className="h-3.5 w-3.5" />
-                  {selectedStore.name}
-                </button>
-              </>
-            )}
             {selectedMenu && (
               <>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -640,56 +706,159 @@ export default function MenuManagementPage() {
         </div>
       </header>
 
-      {/* Drill-down columns: 매장 → 메뉴 → 옵션 그룹 → 옵션 */}
-      <div className="flex-1 px-4 py-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <StoreManager
-            stores={stores}
-            selectedStore={selectedStore}
-            onSelectStore={setSelectedStore}
-            onCreateStore={handleCreateStore}
-            onUpdateStore={handleUpdateStore}
-            onDeleteStore={handleDeleteStore}
-            isLoading={isLoading}
-          />
-          <MenuManager
-            menus={menus}
-            selectedMenu={selectedMenu}
-            storeId={selectedStore?.id || null}
-            onSelectMenu={setSelectedMenu}
-            onCreateMenu={handleCreateMenu}
-            onUpdateMenu={handleUpdateMenu}
-            onDeleteMenu={handleDeleteMenu}
-            isLoading={isLoading}
-          />
-          <OptionGroupManager
-            optionGroups={optionGroups}
-            selectedOptionGroup={selectedOptionGroup}
-            selectedMenu={selectedMenu}
-            targetMenus={targetMenus}
-            onSelectOptionGroup={setSelectedOptionGroup}
-            onCreateOptionGroup={handleCreateOptionGroup}
-            onUpdateOptionGroup={handleUpdateOptionGroup}
-            onDeleteOptionGroup={handleDeleteOptionGroup}
-            onDuplicateOptionGroup={handleDuplicateOptionGroup}
-            onDuplicateAllOptionGroups={handleDuplicateAllOptionGroups}
-            onReorderOptionGroups={handleReorderOptionGroups}
-            isLoading={isLoading}
-          />
-          <OptionManager
-            options={
-              selectedOptionGroup
-                ? options.get(selectedOptionGroup.id) || []
-                : []
-            }
-            selectedOptionGroup={selectedOptionGroup}
-            linkableMenus={linkableMenus}
-            onCreateOption={handleCreateOption}
-            onUpdateOption={handleUpdateOption}
-            onDeleteOption={handleDeleteOption}
-            onReorderOptions={handleReorderOptions}
-            isLoading={isLoading}
-          />
+      {/* New store dialog */}
+      <Dialog open={storeDialogOpen} onOpenChange={setStoreDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>새 매장 추가</DialogTitle>
+            <DialogDescription>새로운 매장 정보를 입력하세요.</DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="new-store-name">매장명</Label>
+              <Input
+                id="new-store-name"
+                value={newStoreForm.name}
+                onChange={(e) =>
+                  setNewStoreForm({ ...newStoreForm, name: e.target.value })
+                }
+                placeholder="매장 이름을 입력하세요"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault()
+                    submitNewStore()
+                  }
+                }}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="new-store-address">주소</Label>
+              <Input
+                id="new-store-address"
+                value={newStoreForm.address}
+                onChange={(e) =>
+                  setNewStoreForm({ ...newStoreForm, address: e.target.value })
+                }
+                placeholder="매장 주소를 입력하세요"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch
+                id="new-store-active"
+                checked={newStoreForm.isActive}
+                onCheckedChange={(checked) =>
+                  setNewStoreForm({ ...newStoreForm, isActive: checked })
+                }
+              />
+              <Label htmlFor="new-store-active">운영중</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setStoreDialogOpen(false)}>
+              취소
+            </Button>
+            <Button
+              onClick={submitNewStore}
+              disabled={isLoading || !newStoreForm.name.trim()}
+            >
+              생성
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete store confirmation dialog */}
+      <Dialog open={deleteStoreOpen} onOpenChange={setDeleteStoreOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>매장 삭제</DialogTitle>
+            <DialogDescription>
+              {selectedStore
+                ? `"${selectedStore.name}" 매장을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`
+                : "삭제할 매장을 선택하세요."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setDeleteStoreOpen(false)}>
+              취소
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDeleteStore}
+              disabled={isLoading || !selectedStore}
+            >
+              삭제
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Miller columns: 매장 → 메뉴 → 옵션 그룹 → 옵션 → 상세 */}
+      <div className="flex-1 overflow-x-auto px-4 py-6 lg:px-8">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
+          <div className={colClass(0)}>
+            <StoreManager
+              stores={stores}
+              selectedStore={selectedStore}
+              onSelectStore={setSelectedStore}
+              onCreateStore={handleCreateStore}
+              onUpdateStore={handleUpdateStore}
+              onDeleteStore={handleDeleteStore}
+              isLoading={isLoading}
+            />
+          </div>
+          <div className={colClass(1)}>
+            <MenuManager
+              menus={menus}
+              selectedMenu={selectedMenu}
+              storeId={selectedStore?.id || null}
+              onSelectMenu={setSelectedMenu}
+              onCreateMenu={handleCreateMenu}
+              onUpdateMenu={handleUpdateMenu}
+              onDeleteMenu={handleDeleteMenu}
+              isLoading={isLoading}
+            />
+          </div>
+          <div className={colClass(2)}>
+            <OptionGroupManager
+              optionGroups={optionGroups}
+              selectedOptionGroup={selectedOptionGroup}
+              selectedMenu={selectedMenu}
+              targetMenus={targetMenus}
+              onSelectOptionGroup={setSelectedOptionGroup}
+              onCreateOptionGroup={handleCreateOptionGroup}
+              onUpdateOptionGroup={handleUpdateOptionGroup}
+              onDeleteOptionGroup={handleDeleteOptionGroup}
+              onDuplicateOptionGroup={handleDuplicateOptionGroup}
+              onDuplicateAllOptionGroups={handleDuplicateAllOptionGroups}
+              onReorderOptionGroups={handleReorderOptionGroups}
+              isLoading={isLoading}
+            />
+          </div>
+          <div className={colClass(3)}>
+            <OptionManager
+              options={
+                selectedOptionGroup
+                  ? options.get(selectedOptionGroup.id) || []
+                  : []
+              }
+              selectedOptionGroup={selectedOptionGroup}
+              linkableMenus={linkableMenus}
+              onCreateOption={handleCreateOption}
+              onUpdateOption={handleUpdateOption}
+              onDeleteOption={handleDeleteOption}
+              onReorderOptions={handleReorderOptions}
+              isLoading={isLoading}
+            />
+          </div>
+          <div className={cn("min-w-0 shrink-0 lg:basis-0 transition-[flex-grow] duration-300 ease-in-out", activeColumn >= 2 ? "lg:flex-[1.6]" : "lg:flex-1")}>
+            <MenuDetail
+              menu={selectedMenu}
+              optionGroups={optionGroups}
+              options={options}
+              linkableMenus={linkableMenus}
+            />
+          </div>
         </div>
       </div>
     </div>
