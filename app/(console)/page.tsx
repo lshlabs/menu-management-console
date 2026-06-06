@@ -255,7 +255,7 @@ export default function MenuManagementPage() {
       setMenus((prev) => [...prev, menu])
       toast.success(`"${menu.name}" 메뉴가 생성되었습니다`)
     } catch (error) {
-      toast.error("메뉴 생성에 실패했습니다")
+      toast.error("메뉴 생성�� 실패했습니다")
       console.error(error)
     } finally {
       setIsLoading(false)
@@ -299,6 +299,25 @@ export default function MenuManagementPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleDuplicateMenu = async (id: string) => {
+    setIsLoading(true)
+    try {
+      const menu = await apiDuplicateMenu(id)
+      setMenus((prev) => [...prev, menu].sort((a, b) => a.sortOrder - b.sortOrder))
+      toast.success(`"${menu.name}" 메뉴가 복제되었습니다`)
+    } catch (error) {
+      toast.error("메뉴 복제에 실패했습니다")
+      console.error(error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Reorder menus (immediate state update for real-time reflection)
+  const handleReorderMenus = (reorderedMenus: Menu[]) => {
+    setMenus(reorderedMenus)
   }
 
   // OptionGroup handlers
@@ -549,32 +568,18 @@ export default function MenuManagementPage() {
               <Button
                 variant="outline"
                 size="sm"
-                disabled={!selectedMenu}
-                onClick={() => setPreviewOpen(true)}
+                disabled={!selectedStore || isLoading}
+                onClick={() => setDeleteStoreOpen(true)}
+                className="text-destructive hover:text-destructive"
                 title={
-                  selectedMenu
-                    ? "선택한 메뉴 미리보기"
-                    : "메뉴를 선택하면 미리보기를 볼 수 있습니다"
+                  selectedStore
+                    ? "선택한 매장 삭제"
+                    : "매장을 선택하면 삭제할 수 있습니다"
                 }
               >
-                <Eye className="mr-2 h-4 w-4" />
-                미리보기
+                <Trash2 className="mr-2 h-4 w-4" />
+                매장 삭제
               </Button>
-              <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-                <DialogContent className="max-w-2xl">
-                  <DialogHeader>
-                    <DialogTitle>메뉴 미리보기</DialogTitle>
-                  </DialogHeader>
-                  <div className="max-h-[70vh] overflow-y-auto">
-                    <MenuDetail
-                      menu={selectedMenu}
-                      optionGroups={optionGroups}
-                      options={options}
-                      linkableMenus={linkableMenus}
-                    />
-                  </div>
-                </DialogContent>
-              </Dialog>
               <JsonImportExport
                 onExport={handleExport}
                 onImport={handleImport}
@@ -583,6 +588,15 @@ export default function MenuManagementPage() {
               />
             </div>
           </div>
+
+          {/* Store tabs */}
+          <StoreTabs
+            stores={stores}
+            selectedStore={selectedStore}
+            onSelectStore={setSelectedStore}
+            onCreateStore={handleCreateStore}
+            isLoading={isLoading}
+          />
 
           {/* Breadcrumb / drill-down path */}
           <nav
@@ -642,57 +656,128 @@ export default function MenuManagementPage() {
         </div>
       </header>
 
-      {/* Drill-down columns: 매장 → 메뉴 → 옵션 그룹 → 옵션 */}
+      {/* Delete store confirmation dialog */}
+      <Dialog open={deleteStoreOpen} onOpenChange={setDeleteStoreOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>매장 삭제</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            &quot;{selectedStore?.name}&quot; 매장과 모든 메뉴, 옵션 그룹, 옵션이
+            함께 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
+          </p>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteStoreOpen(false)}
+              disabled={isLoading}
+            >
+              취소
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={isLoading || !selectedStore}
+              onClick={async () => {
+                if (selectedStore) {
+                  await handleDeleteStore(selectedStore.id)
+                }
+                setDeleteStoreOpen(false)
+              }}
+            >
+              <Trash2 className="mr-1 h-4 w-4" />
+              삭제
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Miller columns: 메뉴 → 옵션 그룹 → 옵션 → 상세 (dynamic widths) */}
       <div className="flex-1 px-4 py-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <StoreManager
-            stores={stores}
-            selectedStore={selectedStore}
-            onSelectStore={setSelectedStore}
-            onCreateStore={handleCreateStore}
-            onUpdateStore={handleUpdateStore}
-            onDeleteStore={handleDeleteStore}
-            isLoading={isLoading}
-          />
-          <MenuManager
-            menus={menus}
-            selectedMenu={selectedMenu}
-            storeId={selectedStore?.id || null}
-            onSelectMenu={setSelectedMenu}
-            onCreateMenu={handleCreateMenu}
-            onUpdateMenu={handleUpdateMenu}
-            onDeleteMenu={handleDeleteMenu}
-            isLoading={isLoading}
-          />
-          <OptionGroupManager
-            optionGroups={optionGroups}
-            selectedOptionGroup={selectedOptionGroup}
-            selectedMenu={selectedMenu}
-            targetMenus={targetMenus}
-            onSelectOptionGroup={setSelectedOptionGroup}
-            onCreateOptionGroup={handleCreateOptionGroup}
-            onUpdateOptionGroup={handleUpdateOptionGroup}
-            onDeleteOptionGroup={handleDeleteOptionGroup}
-            onDuplicateOptionGroup={handleDuplicateOptionGroup}
-            onDuplicateAllOptionGroups={handleDuplicateAllOptionGroups}
-            onReorderOptionGroups={handleReorderOptionGroups}
-            isLoading={isLoading}
-          />
-          <OptionManager
-            options={
-              selectedOptionGroup
-                ? options.get(selectedOptionGroup.id) || []
-                : []
-            }
-            selectedOptionGroup={selectedOptionGroup}
-            linkableMenus={linkableMenus}
-            onCreateOption={handleCreateOption}
-            onUpdateOption={handleUpdateOption}
-            onDeleteOption={handleDeleteOption}
-            onReorderOptions={handleReorderOptions}
-            isLoading={isLoading}
-          />
-        </div>
+        {!selectedStore ? (
+          <div className="flex min-h-[300px] items-center justify-center rounded-lg border border-dashed">
+            <p className="text-sm text-muted-foreground">
+              상단 탭에서 매장을 선택하거나 새 매장을 추가하세요
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch lg:overflow-x-auto lg:pb-2">
+            {/* Menu column */}
+            <div
+              className="min-w-0 transition-all duration-300 ease-in-out lg:min-w-[240px]"
+              style={{ flexGrow: selectedMenu ? 1 : 3, flexBasis: 0 }}
+            >
+              <MenuManager
+                menus={menus}
+                selectedMenu={selectedMenu}
+                storeId={selectedStore?.id || null}
+                onSelectMenu={setSelectedMenu}
+                onCreateMenu={handleCreateMenu}
+                onUpdateMenu={handleUpdateMenu}
+                onDeleteMenu={handleDeleteMenu}
+                onDuplicateMenu={handleDuplicateMenu}
+                onReorderMenus={handleReorderMenus}
+                isLoading={isLoading}
+              />
+            </div>
+
+            {/* Option group column */}
+            {selectedMenu && (
+              <div
+                className="min-w-0 transition-all duration-300 ease-in-out lg:min-w-[240px]"
+                style={{ flexGrow: selectedOptionGroup ? 1 : 3, flexBasis: 0 }}
+              >
+                <OptionGroupManager
+                  optionGroups={optionGroups}
+                  selectedOptionGroup={selectedOptionGroup}
+                  selectedMenu={selectedMenu}
+                  targetMenus={targetMenus}
+                  onSelectOptionGroup={setSelectedOptionGroup}
+                  onCreateOptionGroup={handleCreateOptionGroup}
+                  onUpdateOptionGroup={handleUpdateOptionGroup}
+                  onDeleteOptionGroup={handleDeleteOptionGroup}
+                  onDuplicateOptionGroup={handleDuplicateOptionGroup}
+                  onDuplicateAllOptionGroups={handleDuplicateAllOptionGroups}
+                  onReorderOptionGroups={handleReorderOptionGroups}
+                  isLoading={isLoading}
+                />
+              </div>
+            )}
+
+            {/* Option column */}
+            {selectedOptionGroup && (
+              <div
+                className="min-w-0 transition-all duration-300 ease-in-out lg:min-w-[260px]"
+                style={{ flexGrow: 3, flexBasis: 0 }}
+              >
+                <OptionManager
+                  options={options.get(selectedOptionGroup.id) || []}
+                  selectedOptionGroup={selectedOptionGroup}
+                  linkableMenus={linkableMenus}
+                  onCreateOption={handleCreateOption}
+                  onUpdateOption={handleUpdateOption}
+                  onDeleteOption={handleDeleteOption}
+                  onReorderOptions={handleReorderOptions}
+                  isLoading={isLoading}
+                />
+              </div>
+            )}
+
+            {/* Detail panel (fixed rightmost column) */}
+            {selectedMenu && (
+              <div
+                className="min-w-0 transition-all duration-300 ease-in-out lg:min-w-[300px]"
+                style={{ flexGrow: 4, flexBasis: 0 }}
+              >
+                <MenuDetail
+                  menu={selectedMenu}
+                  optionGroups={optionGroups}
+                  options={options}
+                  linkableMenus={linkableMenus}
+                />
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

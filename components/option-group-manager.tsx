@@ -253,11 +253,14 @@ export function OptionGroupManager({
 
   const handleCreate = async () => {
     if (!formData.name.trim() || !selectedMenu) return
-    const minSelect = formData.isRequired ? Math.max(1, formData.minSelect) : formData.minSelect
+    // '필수' 그룹은 정확히 1개 선택을 강제한다
+    const minSelect = formData.isRequired ? 1 : formData.minSelect
+    const maxSelect = formData.isRequired ? 1 : formData.maxSelect
     await onCreateOptionGroup({
       ...formData,
       menuId: selectedMenu.id,
       minSelect,
+      maxSelect,
       sortOrder: optionGroups.length,
     })
     resetForm()
@@ -265,11 +268,14 @@ export function OptionGroupManager({
 
   const handleUpdate = async () => {
     if (!editingId || !formData.name.trim()) return
-    const minSelect = formData.isRequired ? Math.max(1, formData.minSelect) : formData.minSelect
+    // '필수' 그룹은 정확히 1개 선택을 강제한다
+    const minSelect = formData.isRequired ? 1 : formData.minSelect
+    const maxSelect = formData.isRequired ? 1 : formData.maxSelect
     const currentGroup = optionGroups.find(g => g.id === editingId)
     await onUpdateOptionGroup(editingId, { 
       ...formData, 
       minSelect,
+      maxSelect,
       sortOrder: currentGroup?.sortOrder ?? 0,
     })
     resetForm()
@@ -448,24 +454,22 @@ export function OptionGroupManager({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="og-type">선택 방식</Label>
-                <Select
-                  value={formData.selectionType}
-                  onValueChange={(value: SelectionType) =>
-                    setFormData({ ...formData, selectionType: value })
-                  }
-                >
-                  <SelectTrigger id="og-type">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SELECTION_TYPES.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {type === "RADIO" ? "라디오 (단일 선택)" : "체크박스 (다중 선택)"}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>선택 방식</Label>
+                <div className="flex flex-wrap gap-2">
+                  {SELECTION_TYPES.map((type) => (
+                    <Button
+                      key={type}
+                      type="button"
+                      size="sm"
+                      variant={formData.selectionType === type ? "default" : "outline"}
+                      onClick={() =>
+                        setFormData({ ...formData, selectionType: type })
+                      }
+                    >
+                      {type === "RADIO" ? "라디오 (단일 선택)" : "체크박스 (다중 선택)"}
+                    </Button>
+                  ))}
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <Switch
@@ -475,50 +479,58 @@ export function OptionGroupManager({
                     setFormData({
                       ...formData,
                       isRequired: checked,
-                      minSelect: checked ? Math.max(1, formData.minSelect) : formData.minSelect,
+                      // '필수'일 때는 정확히 1개 선택을 강제한다
+                      minSelect: checked ? 1 : formData.minSelect,
+                      maxSelect: checked ? 1 : formData.maxSelect,
                     })
                   }
                 />
-                <Label htmlFor="og-required">필수 선택</Label>
+                <Label htmlFor="og-required">필수 선택 (정확히 1개)</Label>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor="og-min">최소 선택</Label>
-                  <Input
-                    id="og-min"
-                    type="number"
-                    min={formData.isRequired ? 1 : 0}
-                    value={formData.minSelect}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        minSelect: Math.max(
-                          formData.isRequired ? 1 : 0,
-                          parseInt(e.target.value) || 0
-                        ),
-                      })
-                    }
-                  />
+              {!formData.isRequired && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="og-min">최소 선택</Label>
+                    <Input
+                      id="og-min"
+                      type="number"
+                      min={0}
+                      value={formData.minSelect}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          minSelect: Math.max(0, parseInt(e.target.value) || 0),
+                        })
+                      }
+                      className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="og-max">최대 선택</Label>
+                    <Input
+                      id="og-max"
+                      type="number"
+                      min={formData.minSelect}
+                      value={formData.maxSelect}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          maxSelect: Math.max(
+                            formData.minSelect,
+                            parseInt(e.target.value) || 1
+                          ),
+                        })
+                      }
+                      className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="og-max">최대 선택</Label>
-                  <Input
-                    id="og-max"
-                    type="number"
-                    min={formData.minSelect}
-                    value={formData.maxSelect}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        maxSelect: Math.max(
-                          formData.minSelect,
-                          parseInt(e.target.value) || 1
-                        ),
-                      })
-                    }
-                  />
-                </div>
-              </div>
+              )}
+              {formData.isRequired && (
+                <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
+                  필수 그룹은 고객이 반드시 1개를 선택해야 합니다. (최소/최대 = 1)
+                </p>
+              )}
               <div className="flex items-center gap-2">
                 <Switch
                   id="og-available"
