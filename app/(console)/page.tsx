@@ -581,11 +581,11 @@ export default function MenuManagementPage() {
                 미리보기
               </Button>
               <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-                <DialogContent className="max-w-2xl">
-                  <DialogHeader>
+                <DialogContent className="max-w-2xl gap-0 overflow-hidden p-0">
+                  <DialogHeader className="border-b px-6 py-4">
                     <DialogTitle>메뉴 미리보기</DialogTitle>
                   </DialogHeader>
-                  <div className="max-h-[70vh] overflow-y-auto">
+                  <div className="max-h-[70vh] overflow-y-auto scrollbar-hide">
                     <MenuDetail
                       menu={selectedMenu}
                       optionGroups={optionGroups}
