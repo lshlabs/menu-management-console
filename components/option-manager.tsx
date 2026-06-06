@@ -24,7 +24,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Switch } from "@/components/ui/switch"
+import { cn } from "@/lib/utils"
 import {
   Select,
   SelectContent,
@@ -163,11 +163,15 @@ interface OptionManagerProps {
   selectedOptionGroup: OptionGroup | null
   linkableMenus: Menu[]
   onCreateOption: (data: Omit<Option, "id" | "createdAt" | "updatedAt">) => Promise<void>
-  onCreateOptionWithMenu: (data: Omit<Option, "id" | "createdAt" | "updatedAt">) => Promise<void>
+  onCreateOptionWithMenu: (data: Omit<Option, "id" | "createdAt" | "updatedAt">) => Promise<Menu>
   onUpdateOption: (
     id: string,
     data: Partial<Omit<Option, "id" | "createdAt" | "updatedAt">>
   ) => Promise<void>
+  onUpdateOptionWithMenu: (
+    id: string,
+    data: Partial<Omit<Option, "id" | "createdAt" | "updatedAt">>
+  ) => Promise<Menu>
   onDeleteOption: (id: string) => Promise<void>
   onCloneOption: (id: string) => Promise<void>
   onReorderOptions?: (reorderedOptions: Option[]) => void
@@ -181,6 +185,7 @@ export function OptionManager({
   onCreateOption,
   onCreateOptionWithMenu,
   onUpdateOption,
+  onUpdateOptionWithMenu,
   onDeleteOption,
   onCloneOption,
   onReorderOptions,
@@ -189,6 +194,9 @@ export function OptionManager({
   const [isCreating, setIsCreating] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [addAsMenu, setAddAsMenu] = useState(false)
+  // Menus created via "메뉴로 추가" during this session — supplements linkableMenus
+  // so the card renders the correct name immediately without waiting for a re-fetch.
+  const [pendingMenus, setPendingMenus] = useState<Menu[]>([])
   const [formData, setFormData] = useState<{
     name: string
     effect: OptionEffect
@@ -239,7 +247,8 @@ export function OptionManager({
       sortOrder: options.length,
     }
     if (addAsMenu) {
-      await onCreateOptionWithMenu(payload)
+      const newMenu = await onCreateOptionWithMenu(payload)
+      setPendingMenus((prev) => [...prev, newMenu])
     } else {
       await onCreateOption(payload)
     }
@@ -249,11 +258,17 @@ export function OptionManager({
   const handleUpdate = async () => {
     if (!editingId || !formData.name.trim()) return
     const currentOption = options.find((o) => o.id === editingId)
-    await onUpdateOption(editingId, {
+    const payload = {
       ...formData,
       additionalPrice: parseFloat(formData.additionalPrice) || 0,
       sortOrder: currentOption?.sortOrder ?? 0,
-    })
+    }
+    if (addAsMenu) {
+      const newMenu = await onUpdateOptionWithMenu(editingId, payload)
+      setPendingMenus((prev) => [...prev, newMenu])
+    } else {
+      await onUpdateOption(editingId, payload)
+    }
     resetForm()
   }
 
@@ -345,6 +360,8 @@ export function OptionManager({
     }
   }
 
+  const allLinkableMenus = [...linkableMenus, ...pendingMenus.filter((pm) => !linkableMenus.some((m) => m.id === pm.id))]
+
   if (!selectedOptionGroup) {
     return (
       <Card className="flex items-center justify-center min-h-[200px]">
@@ -433,7 +450,7 @@ export function OptionManager({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">연결 메뉴 없음</SelectItem>
-                  {linkableMenus.map((menu) => (
+                  {allLinkableMenus.map((menu) => (
                     <SelectItem key={menu.id} value={menu.id}>
                       {menu.name} ({menu.type === "SIDE" ? "사이드" : "음료"})
                     </SelectItem>
@@ -441,48 +458,48 @@ export function OptionManager({
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center gap-4 flex-wrap">
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="opt-default"
-                  checked={formData.isDefaultSelected}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, isDefaultSelected: checked })
-                  }
-                />
-                <Label htmlFor="opt-default">기본 선택</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="opt-available"
-                  checked={formData.isAvailable}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, isAvailable: checked })
-                  }
-                />
-                <Label htmlFor="opt-available">사용 가능</Label>
-              </div>
-              {!editingId && (
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="opt-add-as-menu"
-                    checked={addAsMenu}
-                    onCheckedChange={(checked) => {
-                      setAddAsMenu(checked)
-                      if (checked) {
-                        setFormData((prev) => ({ ...prev, linkedMenuId: null }))
-                      }
-                    }}
-                  />
-                  <Label htmlFor="opt-add-as-menu">메뉴로 추가</Label>
-                </div>
-              )}
+            <div className="flex flex-row items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setFormData((prev) => ({ ...prev, isDefaultSelected: !prev.isDefaultSelected }))}
+                className={cn(
+                  "px-3 py-1.5 rounded-md text-sm font-medium border transition-colors",
+                  formData.isDefaultSelected
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-transparent text-muted-foreground border-border hover:border-foreground/40 hover:text-foreground"
+                )}
+              >
+                기본 선택
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormData((prev) => ({ ...prev, isAvailable: !prev.isAvailable }))}
+                className={cn(
+                  "px-3 py-1.5 rounded-md text-sm font-medium border transition-colors",
+                  formData.isAvailable
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-transparent text-muted-foreground border-border hover:border-foreground/40 hover:text-foreground"
+                )}
+              >
+                사용 가능
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !addAsMenu
+                  setAddAsMenu(next)
+                  if (next) setFormData((prev) => ({ ...prev, linkedMenuId: null }))
+                }}
+                className={cn(
+                  "px-3 py-1.5 rounded-md text-sm font-medium border transition-colors",
+                  addAsMenu
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-transparent text-muted-foreground border-border hover:border-foreground/40 hover:text-foreground"
+                )}
+              >
+                메뉴로 추가
+              </button>
             </div>
-            {addAsMenu && !editingId && (
-              <p className="text-xs text-muted-foreground">
-                저장 시 옵션명과 추가 가격으로 새 메뉴 항목(기본 옵션 타입)이 자동 생성되고 이 옵션에 연결됩니다.
-              </p>
-            )}
             <div className="flex gap-2">
               <Button
                 size="sm"
@@ -515,7 +532,7 @@ export function OptionManager({
                   <SortableOptionItem
                     key={option.id}
                     option={option}
-                    linkableMenus={linkableMenus}
+                    linkableMenus={allLinkableMenus}
                     onEdit={() => startEdit(option)}
                     onDelete={() => onDeleteOption(option.id)}
                     onClone={() => onCloneOption(option.id)}
