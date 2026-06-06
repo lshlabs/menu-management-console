@@ -163,6 +163,7 @@ interface OptionManagerProps {
   selectedOptionGroup: OptionGroup | null
   linkableMenus: Menu[]
   onCreateOption: (data: Omit<Option, "id" | "createdAt" | "updatedAt">) => Promise<void>
+  onCreateOptionWithMenu: (data: Omit<Option, "id" | "createdAt" | "updatedAt">) => Promise<void>
   onUpdateOption: (
     id: string,
     data: Partial<Omit<Option, "id" | "createdAt" | "updatedAt">>
@@ -178,6 +179,7 @@ export function OptionManager({
   selectedOptionGroup,
   linkableMenus,
   onCreateOption,
+  onCreateOptionWithMenu,
   onUpdateOption,
   onDeleteOption,
   onCloneOption,
@@ -186,6 +188,7 @@ export function OptionManager({
 }: OptionManagerProps) {
   const [isCreating, setIsCreating] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [addAsMenu, setAddAsMenu] = useState(false)
   const [formData, setFormData] = useState<{
     name: string
     effect: OptionEffect
@@ -222,18 +225,24 @@ export function OptionManager({
       isDefaultSelected: false,
       isAvailable: true,
     })
+    setAddAsMenu(false)
     setIsCreating(false)
     setEditingId(null)
   }
 
   const handleCreate = async () => {
     if (!formData.name.trim() || !selectedOptionGroup) return
-    await onCreateOption({
+    const payload = {
       ...formData,
       additionalPrice: parseFloat(formData.additionalPrice) || 0,
       optionGroupId: selectedOptionGroup.id,
       sortOrder: options.length,
-    })
+    }
+    if (addAsMenu) {
+      await onCreateOptionWithMenu(payload)
+    } else {
+      await onCreateOption(payload)
+    }
     resetForm()
   }
 
@@ -410,16 +419,17 @@ export function OptionManager({
             <div className="space-y-2">
               <Label htmlFor="opt-linked">연결 메뉴 (사이드/음료)</Label>
               <Select
-                value={formData.linkedMenuId || "none"}
+                value={addAsMenu ? "none" : (formData.linkedMenuId || "none")}
                 onValueChange={(value) =>
                   setFormData({
                     ...formData,
                     linkedMenuId: value === "none" ? null : value,
                   })
                 }
+                disabled={addAsMenu}
               >
                 <SelectTrigger id="opt-linked">
-                  <SelectValue placeholder="연결 메뉴 없음" />
+                  <SelectValue placeholder={addAsMenu ? "자동 연결됩니다" : "연결 메뉴 없음"} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">연결 메뉴 없음</SelectItem>
@@ -431,7 +441,7 @@ export function OptionManager({
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
               <div className="flex items-center gap-2">
                 <Switch
                   id="opt-default"
@@ -452,7 +462,27 @@ export function OptionManager({
                 />
                 <Label htmlFor="opt-available">사용 가능</Label>
               </div>
+              {!editingId && (
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="opt-add-as-menu"
+                    checked={addAsMenu}
+                    onCheckedChange={(checked) => {
+                      setAddAsMenu(checked)
+                      if (checked) {
+                        setFormData((prev) => ({ ...prev, linkedMenuId: null }))
+                      }
+                    }}
+                  />
+                  <Label htmlFor="opt-add-as-menu">메뉴로 추가</Label>
+                </div>
+              )}
             </div>
+            {addAsMenu && !editingId && (
+              <p className="text-xs text-muted-foreground">
+                저장 시 옵션명과 추가 가격으로 새 메뉴 항목(기본 옵션 타입)이 자동 생성되고 이 옵션에 연결됩니다.
+              </p>
+            )}
             <div className="flex gap-2">
               <Button
                 size="sm"

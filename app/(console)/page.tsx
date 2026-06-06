@@ -460,6 +460,45 @@ export default function MenuManagementPage() {
     }
   }
 
+  const handleCreateOptionWithMenu = async (
+    data: Omit<Option, "id" | "createdAt" | "updatedAt">
+  ) => {
+    if (!selectedMenu) return
+    setIsLoading(true)
+    try {
+      // 1. Create the new menu item using the option's name and price
+      const newMenu = await apiCreateMenu({
+        storeId: selectedMenu.storeId,
+        name: data.name,
+        type: "SIDE",
+        basePrice: data.additionalPrice,
+        allergens: [],
+        isAvailable: true,
+        sortOrder: menus.length,
+      })
+      setMenus((prev) => [...prev, newMenu])
+
+      // 2. Create the option with the new menu auto-linked
+      const opt = await apiCreateOption({ ...data, linkedMenuId: newMenu.id })
+      setOptions((prev) => {
+        const next = new Map(prev)
+        const existing = next.get(opt.optionGroupId) || []
+        next.set(
+          opt.optionGroupId,
+          [...existing, opt].sort((a, b) => a.sortOrder - b.sortOrder)
+        )
+        return next
+      })
+
+      toast.success(`"${opt.name}" 옵션과 연결 메뉴가 생성되었습니다`)
+    } catch (error) {
+      toast.error("옵션/메뉴 생성에 실패했습니다")
+      console.error(error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   // Option handlers
   const handleCreateOption = async (
     data: Omit<Option, "id" | "createdAt" | "updatedAt">
@@ -745,6 +784,7 @@ export default function MenuManagementPage() {
             selectedOptionGroup={selectedOptionGroup}
             linkableMenus={linkableMenus}
             onCreateOption={handleCreateOption}
+            onCreateOptionWithMenu={handleCreateOptionWithMenu}
             onUpdateOption={handleUpdateOption}
             onDeleteOption={handleDeleteOption}
             onCloneOption={handleCloneOption}
