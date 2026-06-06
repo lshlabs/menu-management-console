@@ -20,7 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { ChevronRight, Store as StoreIcon, Plus, Trash2 } from "lucide-react"
+import { Store as StoreIcon, Plus, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { Store, Menu, OptionGroup, Option, CatalogData } from "@/lib/types"
 import {
@@ -531,15 +531,6 @@ export default function MenuManagementPage() {
     }
   }
 
-  // Breadcrumb navigation: clicking a level clears deeper selections
-  const goToStore = () => {
-    setSelectedMenu(null)
-    setSelectedOptionGroup(null)
-  }
-  const goToMenu = () => {
-    setSelectedOptionGroup(null)
-  }
-
   // New store dialog handlers
   const openStoreDialog = () => {
     setNewStoreForm({ name: "", address: "", isActive: true })
@@ -659,50 +650,6 @@ export default function MenuManagementPage() {
               <span className="sr-only">새 매장 추가</span>
             </Button>
           </div>
-
-          {/* Breadcrumb / drill-down path */}
-          <nav
-            aria-label="탐색 경로"
-            className="flex flex-wrap items-center gap-1 text-sm"
-          >
-            <button
-              type="button"
-              onClick={goToStore}
-              className={cn(
-                "flex items-center gap-1 rounded-md px-2 py-1 transition-colors hover:bg-muted",
-                !selectedMenu
-                  ? "font-semibold text-foreground"
-                  : "font-medium text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <StoreIcon className="h-3.5 w-3.5" />
-              {selectedStore ? selectedStore.name : "매장 미선택"}
-            </button>
-            {selectedMenu && (
-              <>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                <button
-                  type="button"
-                  onClick={goToMenu}
-                  className={`rounded-md px-2 py-1 transition-colors hover:bg-muted ${
-                    !selectedOptionGroup
-                      ? "font-semibold text-foreground"
-                      : "font-medium text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {selectedMenu.name}
-                </button>
-              </>
-            )}
-            {selectedOptionGroup && (
-              <>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                <span className="rounded-md px-2 py-1 font-semibold text-foreground">
-                  {selectedOptionGroup.name}
-                </span>
-              </>
-            )}
-          </nav>
         </div>
       </header>
 
