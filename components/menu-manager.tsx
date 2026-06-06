@@ -1,7 +1,24 @@
 "use client"
 
 import { useState } from "react"
-import { Plus, Edit2, Trash2, Check, X } from "lucide-react"
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core"
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
+import { Plus, Edit2, Trash2, Check, X, Copy, GripVertical } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -9,13 +26,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { cn } from "@/lib/utils"
 import type { Menu, MenuType } from "@/lib/types"
 
 const MENU_TYPES: MenuType[] = ["MAIN", "SET", "SIDE", "DRINK"]
@@ -34,6 +45,139 @@ const COMMON_ALLERGENS = [
   "토마토",
 ]
 
+const getTypeBadgeVariant = (type: MenuType) => {
+  switch (type) {
+    case "MAIN":
+      return "default"
+    case "SET":
+      return "secondary"
+    case "SIDE":
+      return "outline"
+    case "DRINK":
+      return "outline"
+  }
+}
+
+const getTypeLabel = (type: MenuType) => {
+  switch (type) {
+    case "MAIN":
+      return "메인"
+    case "SET":
+      return "세트"
+    case "SIDE":
+      return "사이드"
+    case "DRINK":
+      return "음료"
+  }
+}
+
+interface SortableMenuItemProps {
+  menu: Menu
+  isSelected: boolean
+  onSelect: () => void
+  onEdit: () => void
+  onClone: () => void
+  onDelete: () => void
+}
+
+function SortableMenuItem({
+  menu,
+  isSelected,
+  onSelect,
+  onEdit,
+  onClone,
+  onDelete,
+}: SortableMenuItemProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: menu.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+        isSelected ? "border-primary bg-primary/10" : "hover:bg-muted/50"
+      }`}
+      onClick={onSelect}
+    >
+      <div className="flex items-start gap-2">
+        <button
+          className="mt-1 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
+          aria-label="순서 변경 핸들"
+          onClick={(e) => e.stopPropagation()}
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-medium">{menu.name}</span>
+            <Badge variant={getTypeBadgeVariant(menu.type)} className="shrink-0">
+              {getTypeLabel(menu.type)}
+            </Badge>
+            {!menu.isAvailable && (
+              <Badge variant="secondary" className="shrink-0">
+                품절
+              </Badge>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">
+            {menu.basePrice.toLocaleString()}원
+            {menu.allergens.length > 0 && (
+              <span className="ml-2 text-xs">
+                알레르기: {menu.allergens.join(", ")}
+              </span>
+            )}
+          </p>
+        </div>
+        <div className="flex gap-1 shrink-0">
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7"
+            title="복제"
+            onClick={(e) => {
+              e.stopPropagation()
+              onClone()
+            }}
+          >
+            <Copy className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7"
+            onClick={(e) => {
+              e.stopPropagation()
+              onEdit()
+            }}
+          >
+            <Edit2 className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7 text-destructive hover:text-destructive"
+            onClick={(e) => {
+              e.stopPropagation()
+              onDelete()
+            }}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 interface MenuManagerProps {
   menus: Menu[]
   selectedMenu: Menu | null
@@ -45,6 +189,8 @@ interface MenuManagerProps {
     data: Partial<Omit<Menu, "id" | "createdAt" | "updatedAt">>
   ) => Promise<void>
   onDeleteMenu: (id: string) => Promise<void>
+  onCloneMenu: (id: string) => Promise<void>
+  onReorderMenus?: (reorderedMenus: Menu[]) => void
   isLoading: boolean
 }
 
@@ -56,6 +202,8 @@ export function MenuManager({
   onCreateMenu,
   onUpdateMenu,
   onDeleteMenu,
+  onCloneMenu,
+  onReorderMenus,
   isLoading,
 }: MenuManagerProps) {
   const [isCreating, setIsCreating] = useState(false)
@@ -64,22 +212,33 @@ export function MenuManager({
   const [formData, setFormData] = useState<{
     name: string
     type: MenuType
-    basePrice: number
+    basePrice: string
     allergens: string[]
     isAvailable: boolean
   }>({
     name: "",
     type: "MAIN",
-    basePrice: 0,
+    basePrice: "",
     allergens: [],
     isAvailable: true,
   })
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
 
   const resetForm = () => {
     setFormData({
       name: "",
       type: "MAIN",
-      basePrice: 0,
+      basePrice: "",
       allergens: [],
       isAvailable: true,
     })
@@ -90,13 +249,27 @@ export function MenuManager({
 
   const handleCreate = async () => {
     if (!formData.name.trim() || !storeId) return
-    await onCreateMenu({ ...formData, storeId })
+    await onCreateMenu({
+      name: formData.name,
+      type: formData.type,
+      basePrice: parseFloat(formData.basePrice) || 0,
+      allergens: formData.allergens,
+      isAvailable: formData.isAvailable,
+      storeId,
+      sortOrder: menus.length,
+    })
     resetForm()
   }
 
   const handleUpdate = async () => {
     if (!editingId || !formData.name.trim()) return
-    await onUpdateMenu(editingId, formData)
+    await onUpdateMenu(editingId, {
+      name: formData.name,
+      type: formData.type,
+      basePrice: parseFloat(formData.basePrice) || 0,
+      allergens: formData.allergens,
+      isAvailable: formData.isAvailable,
+    })
     resetForm()
   }
 
@@ -105,7 +278,7 @@ export function MenuManager({
     setFormData({
       name: menu.name,
       type: menu.type,
-      basePrice: menu.basePrice,
+      basePrice: menu.basePrice ? String(menu.basePrice) : "",
       allergens: menu.allergens,
       isAvailable: menu.isAvailable,
     })
@@ -119,7 +292,7 @@ export function MenuManager({
     setFormData({
       name: "",
       type: "MAIN",
-      basePrice: 0,
+      basePrice: "",
       allergens: [],
       isAvailable: true,
     })
@@ -153,30 +326,33 @@ export function MenuManager({
     }))
   }
 
-  const getTypeBadgeVariant = (type: MenuType) => {
-    switch (type) {
-      case "MAIN":
-        return "default"
-      case "SET":
-        return "secondary"
-      case "SIDE":
-        return "outline"
-      case "DRINK":
-        return "outline"
-    }
-  }
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
 
-  const getTypeLabel = (type: MenuType) => {
-    switch (type) {
-      case "MAIN":
-        return "메인"
-      case "SET":
-        return "세트"
-      case "SIDE":
-        return "사이드"
-      case "DRINK":
-        return "음료"
-    }
+    if (!over || active.id === over.id) return
+
+    const oldIndex = menus.findIndex((m) => m.id === active.id)
+    const newIndex = menus.findIndex((m) => m.id === over.id)
+    if (oldIndex === -1 || newIndex === -1) return
+
+    // Recompute sortOrder for every menu based on its new position
+    const reordered = arrayMove(menus, oldIndex, newIndex).map((menu, index) => ({
+      ...menu,
+      sortOrder: index,
+    }))
+
+    // Optimistic UI update so the new order reflects immediately
+    onReorderMenus?.(reordered)
+
+    // Persist every menu whose position actually changed
+    const changed = reordered.filter((menu) => {
+      const original = menus.find((m) => m.id === menu.id)
+      return !original || original.sortOrder !== menu.sortOrder
+    })
+
+    await Promise.all(
+      changed.map((menu) => onUpdateMenu(menu.id, { sortOrder: menu.sortOrder }))
+    )
   }
 
   if (!storeId) {
@@ -219,24 +395,25 @@ export function MenuManager({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="menu-type">메뉴 유형</Label>
-              <Select
-                value={formData.type}
-                onValueChange={(value: MenuType) =>
-                  setFormData({ ...formData, type: value })
-                }
-              >
-                <SelectTrigger id="menu-type">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {MENU_TYPES.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {getTypeLabel(type)} ({type})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>메뉴 유형</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {MENU_TYPES.map((type) => (
+                  <Button
+                    key={type}
+                    type="button"
+                    size="sm"
+                    variant={formData.type === type ? "default" : "outline"}
+                    className={cn(
+                      "flex-1 min-w-[64px]",
+                      formData.type === type && "pointer-events-none"
+                    )}
+                    aria-pressed={formData.type === type}
+                    onClick={() => setFormData({ ...formData, type })}
+                  >
+                    {getTypeLabel(type)}
+                  </Button>
+                ))}
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="menu-price">기본가격 (원)</Label>
@@ -245,9 +422,11 @@ export function MenuManager({
                 type="number"
                 min="0"
                 step="100"
+                inputMode="numeric"
+                placeholder="가격을 입력하세요"
                 value={formData.basePrice}
                 onChange={(e) =>
-                  setFormData({ ...formData, basePrice: parseFloat(e.target.value) || 0 })
+                  setFormData({ ...formData, basePrice: e.target.value })
                 }
               />
             </div>
@@ -271,16 +450,18 @@ export function MenuManager({
               )}
               {/* Common allergens */}
               <div className="flex flex-wrap gap-1.5">
-                {COMMON_ALLERGENS.filter(a => !formData.allergens.includes(a)).map((allergen) => (
-                  <Badge
-                    key={allergen}
-                    variant="outline"
-                    className="cursor-pointer hover:bg-muted"
-                    onClick={() => toggleAllergen(allergen)}
-                  >
-                    {allergen}
-                  </Badge>
-                ))}
+                {COMMON_ALLERGENS.filter((a) => !formData.allergens.includes(a)).map(
+                  (allergen) => (
+                    <Badge
+                      key={allergen}
+                      variant="outline"
+                      className="cursor-pointer hover:bg-muted"
+                      onClick={() => toggleAllergen(allergen)}
+                    >
+                      {allergen}
+                    </Badge>
+                  )
+                )}
               </div>
               {/* Custom allergen input */}
               <div className="flex gap-2 mt-2">
@@ -341,65 +522,30 @@ export function MenuManager({
                 등록된 메뉴가 없습니다. 새 메뉴를 생성하세요.
               </p>
             )}
-            {menus.map((menu) => (
-              <div
-                key={menu.id}
-                className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                  selectedMenu?.id === menu.id
-                    ? "border-primary bg-primary/10"
-                    : "hover:bg-muted/50"
-                }`}
-                onClick={() => onSelectMenu(menu)}
+            {menus.length > 0 && (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium">{menu.name}</span>
-                      <Badge variant={getTypeBadgeVariant(menu.type)} className="shrink-0">
-                        {getTypeLabel(menu.type)}
-                      </Badge>
-                      {!menu.isAvailable && (
-                        <Badge variant="secondary" className="shrink-0">
-                          품절
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {menu.basePrice.toLocaleString()}원
-                      {menu.allergens.length > 0 && (
-                        <span className="ml-2 text-xs">
-                          알레르기: {menu.allergens.join(", ")}
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                  <div className="flex gap-1 shrink-0">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-7 w-7"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        startEdit(menu)
-                      }}
-                    >
-                      <Edit2 className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-7 w-7 text-destructive hover:text-destructive"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onDeleteMenu(menu.id)
-                      }}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))}
+                <SortableContext
+                  items={menus.map((m) => m.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {menus.map((menu) => (
+                    <SortableMenuItem
+                      key={menu.id}
+                      menu={menu}
+                      isSelected={selectedMenu?.id === menu.id}
+                      onSelect={() => onSelectMenu(menu)}
+                      onEdit={() => startEdit(menu)}
+                      onClone={() => onCloneMenu(menu.id)}
+                      onDelete={() => onDeleteMenu(menu.id)}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
+            )}
           </div>
         </ScrollArea>
       </CardContent>

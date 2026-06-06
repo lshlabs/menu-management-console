@@ -26,6 +26,7 @@ import {
   apiCreateMenu,
   apiUpdateMenu,
   apiDeleteMenu,
+  apiCloneMenu,
   apiGetOptionGroups,
   apiCreateOptionGroup,
   apiUpdateOptionGroup,
@@ -299,6 +300,27 @@ export default function MenuManagementPage() {
     }
   }
 
+  const handleCloneMenu = async (id: string) => {
+    if (!selectedStore) return
+    setIsLoading(true)
+    try {
+      const cloned = await apiCloneMenu(id)
+      const data = await apiGetMenus(selectedStore.id)
+      setMenus(data)
+      toast.success(`"${cloned.name}" 메뉴가 복제되었습니다`)
+    } catch (error) {
+      toast.error("메뉴 복제에 실패했습니다")
+      console.error(error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Reorder menus (immediate state update for real-time reflection)
+  const handleReorderMenus = (reorderedMenus: Menu[]) => {
+    setMenus(reorderedMenus)
+  }
+
   // OptionGroup handlers
   const handleCreateOptionGroup = async (
     data: Omit<OptionGroup, "id" | "createdAt" | "updatedAt">
@@ -559,11 +581,11 @@ export default function MenuManagementPage() {
                 미리보기
               </Button>
               <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-                <DialogContent className="max-w-2xl">
-                  <DialogHeader>
+                <DialogContent className="max-w-2xl gap-0 overflow-hidden p-0">
+                  <DialogHeader className="border-b px-6 py-4">
                     <DialogTitle>메뉴 미리보기</DialogTitle>
                   </DialogHeader>
-                  <div className="max-h-[70vh] overflow-y-auto">
+                  <div className="max-h-[70vh] overflow-y-auto scrollbar-hide">
                     <MenuDetail
                       menu={selectedMenu}
                       optionGroups={optionGroups}
@@ -660,6 +682,8 @@ export default function MenuManagementPage() {
             onCreateMenu={handleCreateMenu}
             onUpdateMenu={handleUpdateMenu}
             onDeleteMenu={handleDeleteMenu}
+            onCloneMenu={handleCloneMenu}
+            onReorderMenus={handleReorderMenus}
             isLoading={isLoading}
           />
           <OptionGroupManager

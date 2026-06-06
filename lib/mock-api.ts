@@ -74,15 +74,21 @@ export async function apiDeleteStore(id: string): Promise<void> {
 // Menu API
 export async function apiGetMenus(storeId: string): Promise<Menu[]> {
   await delay()
-  return menus.filter((m) => m.storeId === storeId)
+  return menus
+    .filter((m) => m.storeId === storeId)
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
 }
 
 export async function apiCreateMenu(
   data: Omit<Menu, "id" | "createdAt" | "updatedAt">
 ): Promise<Menu> {
   await delay()
+  const maxSort = menus
+    .filter((m) => m.storeId === data.storeId)
+    .reduce((max, m) => Math.max(max, m.sortOrder ?? 0), -1)
   const menu: Menu = {
     ...data,
+    sortOrder: data.sortOrder ?? maxSort + 1,
     id: generateId(),
     createdAt: timestamp(),
     updatedAt: timestamp(),
@@ -113,6 +119,54 @@ export async function apiDeleteMenu(id: string): Promise<void> {
   options = options.filter((o) => !optionGroupIds.includes(o.optionGroupId))
   optionGroups = optionGroups.filter((og) => og.menuId !== id)
   menus.splice(index, 1)
+}
+
+// Clone (duplicate) a menu along with all of its option groups and options
+export async function apiCloneMenu(id: string): Promise<Menu> {
+  await delay()
+  const source = menus.find((m) => m.id === id)
+  if (!source) throw new Error("Menu not found")
+
+  const maxSort = menus
+    .filter((m) => m.storeId === source.storeId)
+    .reduce((max, m) => Math.max(max, m.sortOrder ?? 0), -1)
+
+  const newMenu: Menu = {
+    ...source,
+    id: generateId(),
+    name: `${source.name} (복사본)`,
+    allergens: [...source.allergens],
+    sortOrder: maxSort + 1,
+    createdAt: timestamp(),
+    updatedAt: timestamp(),
+  }
+  menus.push(newMenu)
+
+  // Clone option groups and their options
+  const sourceGroups = optionGroups.filter((og) => og.menuId === id)
+  for (const group of sourceGroups) {
+    const newGroup: OptionGroup = {
+      ...group,
+      id: generateId(),
+      menuId: newMenu.id,
+      createdAt: timestamp(),
+      updatedAt: timestamp(),
+    }
+    optionGroups.push(newGroup)
+
+    const groupOptions = options.filter((o) => o.optionGroupId === group.id)
+    for (const opt of groupOptions) {
+      options.push({
+        ...opt,
+        id: generateId(),
+        optionGroupId: newGroup.id,
+        createdAt: timestamp(),
+        updatedAt: timestamp(),
+      })
+    }
+  }
+
+  return newMenu
 }
 
 // OptionGroup API

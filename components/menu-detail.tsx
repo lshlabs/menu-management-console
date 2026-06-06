@@ -1,9 +1,7 @@
 "use client"
 
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import type { Menu, OptionGroup, Option } from "@/lib/types"
 
 interface MenuDetailProps {
@@ -36,32 +34,25 @@ export function MenuDetail({
 
   if (!menu) {
     return (
-      <Card className="flex items-center justify-center min-h-[200px]">
+      <div className="flex items-center justify-center px-6 py-16">
         <p className="text-sm text-muted-foreground">
           메뉴를 선택하면 상세 정보가 표시됩니다
         </p>
-      </Card>
+      </div>
     )
   }
 
   const canHaveOptions = menu.type === "MAIN" || menu.type === "SET"
 
   return (
-    <Card className="flex flex-col">
-      <CardHeader className="pb-3">
+    <div className="flex flex-col px-6 pb-6 pt-5 space-y-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">메뉴 상세</CardTitle>
+          <p className="text-base font-semibold">{menu.name}</p>
           <Badge variant={menu.isAvailable ? "default" : "secondary"}>
             {menu.isAvailable ? "판매중" : "품절"}
           </Badge>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
         <div className="space-y-3">
-          <div>
-            <p className="text-xs text-muted-foreground">메뉴명</p>
-            <p className="font-medium">{menu.name}</p>
-          </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-xs text-muted-foreground">ID</p>
@@ -106,12 +97,11 @@ export function MenuDetail({
             </p>
           </div>
         ) : (
-          <ScrollArea className="max-h-[400px]">
-            <div className="space-y-4 pr-4">
-              <p className="text-sm font-medium">
-                옵션 그룹 ({optionGroups.length}개)
-              </p>
-              {optionGroups.map((group) => {
+          <div className="space-y-4">
+            <p className="text-sm font-medium">
+              옵션 그룹 ({optionGroups.length}개)
+            </p>
+            {optionGroups.map((group) => {
                 const groupOptions = options.get(group.id) || []
                 return (
                   <div key={group.id} className="border rounded-lg p-3 space-y-2">
@@ -176,10 +166,8 @@ export function MenuDetail({
                   </div>
                 )
               })}
-            </div>
-          </ScrollArea>
+          </div>
         )}
-      </CardContent>
-    </Card>
+    </div>
   )
 }
