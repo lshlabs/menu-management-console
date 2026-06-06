@@ -250,6 +250,60 @@ export async function apiDeleteOption(id: string): Promise<void> {
   options.splice(index, 1)
 }
 
+export async function apiCloneOptionGroup(id: string): Promise<OptionGroup> {
+  await delay()
+  const source = optionGroups.find((og) => og.id === id)
+  if (!source) throw new Error("OptionGroup not found")
+
+  const siblingSortMax = optionGroups
+    .filter((og) => og.menuId === source.menuId)
+    .reduce((max, og) => Math.max(max, og.sortOrder ?? 0), -1)
+
+  const newGroup: OptionGroup = {
+    ...source,
+    id: generateId(),
+    name: `${source.name} (복사본)`,
+    sortOrder: siblingSortMax + 1,
+    createdAt: timestamp(),
+    updatedAt: timestamp(),
+  }
+  optionGroups.push(newGroup)
+
+  const sourceOptions = options.filter((o) => o.optionGroupId === id)
+  for (const opt of sourceOptions) {
+    options.push({
+      ...opt,
+      id: generateId(),
+      optionGroupId: newGroup.id,
+      createdAt: timestamp(),
+      updatedAt: timestamp(),
+    })
+  }
+
+  return newGroup
+}
+
+export async function apiCloneOption(id: string): Promise<Option> {
+  await delay()
+  const source = options.find((o) => o.id === id)
+  if (!source) throw new Error("Option not found")
+
+  const siblingSortMax = options
+    .filter((o) => o.optionGroupId === source.optionGroupId)
+    .reduce((max, o) => Math.max(max, o.sortOrder ?? 0), -1)
+
+  const newOption: Option = {
+    ...source,
+    id: generateId(),
+    name: `${source.name} (복사본)`,
+    sortOrder: siblingSortMax + 1,
+    createdAt: timestamp(),
+    updatedAt: timestamp(),
+  }
+  options.push(newOption)
+  return newOption
+}
+
 // Duplication API
 export async function apiDuplicateOptionGroup(
   optionGroupId: string,
@@ -575,7 +629,7 @@ export async function apiGenerateOrder(
       (m.type === "MAIN" || m.type === "SET")
   )
   if (orderableMenus.length === 0) {
-    throw new Error("주문 가능한 메뉴(메인/세트)가 없습니다")
+    throw new Error("주문 가능한 메뉴(메인/세��)가 없습니다")
   }
 
   const itemCount = Math.min(

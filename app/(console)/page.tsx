@@ -37,6 +37,8 @@ import {
   apiDeleteOption,
   apiDuplicateOptionGroup,
   apiDuplicateAllOptionGroups,
+  apiCloneOptionGroup,
+  apiCloneOption,
   apiExportCatalog,
   apiImportCatalog,
   apiGetLinkableMenus,
@@ -422,6 +424,42 @@ export default function MenuManagementPage() {
     }
   }
 
+  const handleCloneOptionGroup = async (id: string) => {
+    setIsLoading(true)
+    try {
+      const cloned = await apiCloneOptionGroup(id)
+      setOptionGroups((prev) => [...prev, cloned])
+      toast.success(`"${cloned.name}" 옵션 그룹이 복제되었습니다`)
+    } catch (error) {
+      toast.error("옵션 그룹 복제에 실패했습니다")
+      console.error(error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleCloneOption = async (id: string) => {
+    setIsLoading(true)
+    try {
+      const cloned = await apiCloneOption(id)
+      setOptions((prev) => {
+        const next = new Map(prev)
+        const existing = next.get(cloned.optionGroupId) || []
+        next.set(
+          cloned.optionGroupId,
+          [...existing, cloned].sort((a, b) => a.sortOrder - b.sortOrder)
+        )
+        return next
+      })
+      toast.success(`"${cloned.name}" 옵션이 복제되었습니다`)
+    } catch (error) {
+      toast.error("옵션 복제에 실패했습니다")
+      console.error(error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   // Option handlers
   const handleCreateOption = async (
     data: Omit<Option, "id" | "createdAt" | "updatedAt">
@@ -690,13 +728,11 @@ export default function MenuManagementPage() {
             optionGroups={optionGroups}
             selectedOptionGroup={selectedOptionGroup}
             selectedMenu={selectedMenu}
-            targetMenus={targetMenus}
             onSelectOptionGroup={setSelectedOptionGroup}
             onCreateOptionGroup={handleCreateOptionGroup}
             onUpdateOptionGroup={handleUpdateOptionGroup}
             onDeleteOptionGroup={handleDeleteOptionGroup}
-            onDuplicateOptionGroup={handleDuplicateOptionGroup}
-            onDuplicateAllOptionGroups={handleDuplicateAllOptionGroups}
+            onCloneOptionGroup={handleCloneOptionGroup}
             onReorderOptionGroups={handleReorderOptionGroups}
             isLoading={isLoading}
           />
@@ -711,6 +747,7 @@ export default function MenuManagementPage() {
             onCreateOption={handleCreateOption}
             onUpdateOption={handleUpdateOption}
             onDeleteOption={handleDeleteOption}
+            onCloneOption={handleCloneOption}
             onReorderOptions={handleReorderOptions}
             isLoading={isLoading}
           />
