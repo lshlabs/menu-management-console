@@ -170,14 +170,14 @@ export function OptionManager({
   const [formData, setFormData] = useState<{
     name: string
     effect: OptionEffect
-    additionalPrice: number
+    additionalPrice: string
     linkedMenuId: string | null
     isDefaultSelected: boolean
     isAvailable: boolean
   }>({
     name: "",
     effect: "NONE",
-    additionalPrice: 0,
+    additionalPrice: "",
     linkedMenuId: null,
     isDefaultSelected: false,
     isAvailable: true,
@@ -198,7 +198,7 @@ export function OptionManager({
     setFormData({
       name: "",
       effect: "NONE",
-      additionalPrice: 0,
+      additionalPrice: "",
       linkedMenuId: null,
       isDefaultSelected: false,
       isAvailable: true,
@@ -211,6 +211,7 @@ export function OptionManager({
     if (!formData.name.trim() || !selectedOptionGroup) return
     await onCreateOption({
       ...formData,
+      additionalPrice: parseFloat(formData.additionalPrice) || 0,
       optionGroupId: selectedOptionGroup.id,
       sortOrder: options.length,
     })
@@ -219,9 +220,10 @@ export function OptionManager({
 
   const handleUpdate = async () => {
     if (!editingId || !formData.name.trim()) return
-    const currentOption = options.find(o => o.id === editingId)
+    const currentOption = options.find((o) => o.id === editingId)
     await onUpdateOption(editingId, {
       ...formData,
+      additionalPrice: parseFloat(formData.additionalPrice) || 0,
       sortOrder: currentOption?.sortOrder ?? 0,
     })
     resetForm()
@@ -232,7 +234,7 @@ export function OptionManager({
     setFormData({
       name: option.name,
       effect: option.effect,
-      additionalPrice: option.additionalPrice,
+      additionalPrice: option.additionalPrice ? String(option.additionalPrice) : "",
       linkedMenuId: option.linkedMenuId,
       isDefaultSelected: option.isDefaultSelected,
       isAvailable: option.isAvailable,
@@ -246,7 +248,7 @@ export function OptionManager({
     setFormData({
       name: "",
       effect: "NONE",
-      additionalPrice: 0,
+      additionalPrice: "",
       linkedMenuId: null,
       isDefaultSelected: false,
       isAvailable: true,
@@ -383,12 +385,11 @@ export function OptionManager({
                 id="opt-price"
                 type="number"
                 step="100"
+                inputMode="numeric"
+                placeholder="가격을 입력하세요"
                 value={formData.additionalPrice}
                 onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    additionalPrice: parseFloat(e.target.value) || 0,
-                  })
+                  setFormData({ ...formData, additionalPrice: e.target.value })
                 }
               />
             </div>
@@ -459,12 +460,6 @@ export function OptionManager({
           {options.length === 0 && !isCreating && (
             <p className="text-sm text-muted-foreground text-center py-4">
               옵션이 없습니다. 새 옵션을 생성하세요.
-            </p>
-          )}
-          {options.length > 1 && (
-            <p className="flex items-center gap-1 text-xs text-muted-foreground">
-              <GripVertical className="h-3 w-3" />
-              드래그하여 순서를 변경할 수 있습니다 (자동 저장)
             </p>
           )}
           {options.length > 0 && (

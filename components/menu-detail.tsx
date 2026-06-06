@@ -3,7 +3,6 @@
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import type { Menu, OptionGroup, Option } from "@/lib/types"
 
 interface MenuDetailProps {
@@ -106,8 +105,8 @@ export function MenuDetail({
             </p>
           </div>
         ) : (
-          <ScrollArea className="max-h-[400px]">
-            <div className="space-y-4 pr-4">
+          <div className="overflow-y-auto scrollbar-hide">
+            <div className="space-y-4">
               <p className="text-sm font-medium">
                 옵션 그룹 ({optionGroups.length}개)
               </p>
@@ -177,7 +176,7 @@ export function MenuDetail({
                 )
               })}
             </div>
-          </ScrollArea>
+          </div>
         )}
       </CardContent>
     </Card>

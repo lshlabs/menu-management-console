@@ -522,12 +522,6 @@ export function MenuManager({
                 등록된 메뉴가 없습니다. 새 메뉴를 생성하세요.
               </p>
             )}
-            {menus.length > 1 && (
-              <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                <GripVertical className="h-3 w-3" />
-                드래그하여 순서를 변경할 수 있습니다 (자동 저장)
-              </p>
-            )}
             {menus.length > 0 && (
               <DndContext
                 sensors={sensors}
