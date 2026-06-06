@@ -19,6 +19,7 @@ export interface Menu {
   basePrice: number
   allergens: string[]
   isAvailable: boolean
+  sortOrder: number
   createdAt: string
   updatedAt: string
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { toast } from "sonner"
-import { StoreManager } from "@/components/store-manager"
+import { StoreTabs } from "@/components/store-tabs"
 import { MenuManager } from "@/components/menu-manager"
 import { OptionGroupManager } from "@/components/option-group-manager"
 import { OptionManager } from "@/components/option-manager"
@@ -12,10 +12,11 @@ import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { ChevronRight, Eye, Store as StoreIcon, Home } from "lucide-react"
+import { ChevronRight, Trash2, Store as StoreIcon, Home } from "lucide-react"
 import type { Store, Menu, OptionGroup, Option, CatalogData } from "@/lib/types"
 import {
   apiGetStores,
@@ -26,6 +27,7 @@ import {
   apiCreateMenu,
   apiUpdateMenu,
   apiDeleteMenu,
+  apiDuplicateMenu,
   apiGetOptionGroups,
   apiCreateOptionGroup,
   apiUpdateOptionGroup,
@@ -61,8 +63,8 @@ export default function MenuManagementPage() {
   // Loading state
   const [isLoading, setIsLoading] = useState(false)
 
-  // Menu preview dialog state
-  const [previewOpen, setPreviewOpen] = useState(false)
+  // Delete store confirmation state
+  const [deleteStoreOpen, setDeleteStoreOpen] = useState(false)
 
   // Load stores on mount
   useEffect(() => {

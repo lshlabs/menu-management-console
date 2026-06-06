@@ -74,7 +74,9 @@ export async function apiDeleteStore(id: string): Promise<void> {
 // Menu API
 export async function apiGetMenus(storeId: string): Promise<Menu[]> {
   await delay()
-  return menus.filter((m) => m.storeId === storeId)
+  return menus
+    .filter((m) => m.storeId === storeId)
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
 }
 
 export async function apiCreateMenu(
@@ -113,6 +115,55 @@ export async function apiDeleteMenu(id: string): Promise<void> {
   options = options.filter((o) => !optionGroupIds.includes(o.optionGroupId))
   optionGroups = optionGroups.filter((og) => og.menuId !== id)
   menus.splice(index, 1)
+}
+
+// Duplicate a menu along with all its option groups and options
+export async function apiDuplicateMenu(id: string): Promise<Menu> {
+  await delay()
+  const source = menus.find((m) => m.id === id)
+  if (!source) throw new Error("Menu not found")
+
+  const storeMenus = menus.filter((m) => m.storeId === source.storeId)
+  const maxOrder = storeMenus.reduce(
+    (max, m) => Math.max(max, m.sortOrder ?? 0),
+    -1
+  )
+
+  const newMenu: Menu = {
+    ...source,
+    id: generateId(),
+    name: `${source.name} (복사본)`,
+    sortOrder: maxOrder + 1,
+    createdAt: timestamp(),
+    updatedAt: timestamp(),
+  }
+  menus.push(newMenu)
+
+  // Clone option groups and their options
+  const sourceGroups = optionGroups.filter((og) => og.menuId === id)
+  for (const group of sourceGroups) {
+    const newGroup: OptionGroup = {
+      ...group,
+      id: generateId(),
+      menuId: newMenu.id,
+      createdAt: timestamp(),
+      updatedAt: timestamp(),
+    }
+    optionGroups.push(newGroup)
+
+    const groupOptions = options.filter((o) => o.optionGroupId === group.id)
+    for (const opt of groupOptions) {
+      options.push({
+        ...opt,
+        id: generateId(),
+        optionGroupId: newGroup.id,
+        createdAt: timestamp(),
+        updatedAt: timestamp(),
+      })
+    }
+  }
+
+  return newMenu
 }
 
 // OptionGroup API
@@ -330,7 +381,11 @@ export async function apiImportCatalog(
     if (mode === "merge" && menus.find((m) => m.id === menu.id)) {
       continue
     }
-    menus.push({ ...menu, updatedAt: timestamp() })
+    menus.push({
+      ...menu,
+      sortOrder: menu.sortOrder ?? menus.filter((m) => m.storeId === menu.storeId).length,
+      updatedAt: timestamp(),
+    })
     imported++
   }
 
