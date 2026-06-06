@@ -509,7 +509,7 @@ export function MenuManager({
         )}
 
         <ScrollArea className="max-h-[350px]">
-          <div className="space-y-2 pr-4">
+          <div className="space-y-2">
             {menus.length > 0 && (
               <DndContext
                 sensors={sensors}

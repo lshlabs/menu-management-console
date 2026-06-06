@@ -132,7 +132,7 @@ export function StoreManager({
         )}
 
         <ScrollArea className="max-h-[280px]">
-          <div className="space-y-2 pr-4">
+          <div className="space-y-2">
             {stores.map((store) => (
               <div
                 key={store.id}
