@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { toast } from "sonner"
-import { StoreManager } from "@/components/store-manager"
 import { MenuManager } from "@/components/menu-manager"
 import { OptionGroupManager } from "@/components/option-group-manager"
 import { OptionManager } from "@/components/option-manager"
@@ -71,7 +70,6 @@ export default function MenuManagementPage() {
   const [storeDialogOpen, setStoreDialogOpen] = useState(false)
   const [newStoreForm, setNewStoreForm] = useState({
     name: "",
-    address: "",
     isActive: true,
   })
 
@@ -533,13 +531,13 @@ export default function MenuManagementPage() {
 
   // New store dialog handlers
   const openStoreDialog = () => {
-    setNewStoreForm({ name: "", address: "", isActive: true })
+    setNewStoreForm({ name: "", isActive: true })
     setStoreDialogOpen(true)
   }
 
   const submitNewStore = async () => {
     if (!newStoreForm.name.trim()) return
-    await handleCreateStore(newStoreForm)
+    await handleCreateStore({ ...newStoreForm, address: "" })
     setStoreDialogOpen(false)
   }
 
@@ -550,14 +548,8 @@ export default function MenuManagementPage() {
   }
 
   // Miller column depth: which level is the user currently focused on?
-  // 0 = stores, 1 = menus, 2 = option groups, 3 = options, 4 = detail
-  const activeColumn = selectedOptionGroup
-    ? 3
-    : selectedMenu
-      ? 2
-      : selectedStore
-        ? 1
-        : 0
+  // 0 = menus, 1 = option groups, 2 = options
+  const activeColumn = selectedOptionGroup ? 2 : selectedMenu ? 1 : 0
 
   // Dynamic flex sizing for Miller columns. Completed (left) columns shrink,
   // the active column expands. Detail panel always shown as the last column.
@@ -678,17 +670,6 @@ export default function MenuManagementPage() {
                 }}
               />
             </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="new-store-address">주소</Label>
-              <Input
-                id="new-store-address"
-                value={newStoreForm.address}
-                onChange={(e) =>
-                  setNewStoreForm({ ...newStoreForm, address: e.target.value })
-                }
-                placeholder="매장 주소를 입력하세요"
-              />
-            </div>
             <div className="flex items-center gap-2">
               <Switch
                 id="new-store-active"
@@ -740,21 +721,10 @@ export default function MenuManagementPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Miller columns: 매장 → 메뉴 → 옵션 그룹 → 옵션 → 상세 */}
+      {/* Miller columns: 메뉴 → 옵션 그룹 → 옵션 → 상세 */}
       <div className="flex-1 overflow-x-auto px-4 py-6 lg:px-8">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
           <div className={colClass(0)}>
-            <StoreManager
-              stores={stores}
-              selectedStore={selectedStore}
-              onSelectStore={setSelectedStore}
-              onCreateStore={handleCreateStore}
-              onUpdateStore={handleUpdateStore}
-              onDeleteStore={handleDeleteStore}
-              isLoading={isLoading}
-            />
-          </div>
-          <div className={colClass(1)}>
             <MenuManager
               menus={menus}
               selectedMenu={selectedMenu}
@@ -766,7 +736,7 @@ export default function MenuManagementPage() {
               isLoading={isLoading}
             />
           </div>
-          <div className={colClass(2)}>
+          <div className={colClass(1)}>
             <OptionGroupManager
               optionGroups={optionGroups}
               selectedOptionGroup={selectedOptionGroup}
@@ -782,7 +752,7 @@ export default function MenuManagementPage() {
               isLoading={isLoading}
             />
           </div>
-          <div className={colClass(3)}>
+          <div className={colClass(2)}>
             <OptionManager
               options={
                 selectedOptionGroup
@@ -798,7 +768,7 @@ export default function MenuManagementPage() {
               isLoading={isLoading}
             />
           </div>
-          <div className={cn("min-w-0 shrink-0 lg:basis-0 transition-[flex-grow] duration-300 ease-in-out", activeColumn >= 2 ? "lg:flex-[1.6]" : "lg:flex-1")}>
+          <div className={cn("min-w-0 shrink-0 lg:basis-0 transition-[flex-grow] duration-300 ease-in-out", activeColumn >= 1 ? "lg:flex-[1.6]" : "lg:flex-1")}>
             <MenuDetail
               menu={selectedMenu}
               optionGroups={optionGroups}
