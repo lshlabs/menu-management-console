@@ -256,30 +256,33 @@ export function OptionManager({
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
 
-    if (over && active.id !== over.id) {
-      const oldIndex = options.findIndex((o) => o.id === active.id)
-      const newIndex = options.findIndex((o) => o.id === over.id)
-      
-      const reordered = arrayMove(options, oldIndex, newIndex)
-      
-      // Update sortOrder for all reordered items
-      const updates = reordered.map((option, index) => ({
-        ...option,
-        sortOrder: index,
-      }))
-      
-      // Call the reorder callback if provided
-      if (onReorderOptions) {
-        onReorderOptions(updates)
-      }
-      
-      // Update each item's sortOrder in the API
-      for (let i = 0; i < updates.length; i++) {
-        if (updates[i].sortOrder !== options[i]?.sortOrder) {
-          await onUpdateOption(updates[i].id, { sortOrder: updates[i].sortOrder })
-        }
-      }
-    }
+    if (!over || active.id === over.id) return
+
+    const oldIndex = options.findIndex((o) => o.id === active.id)
+    const newIndex = options.findIndex((o) => o.id === over.id)
+    if (oldIndex === -1 || newIndex === -1) return
+
+    // Recompute sortOrder for every option based on its new position
+    const reordered = arrayMove(options, oldIndex, newIndex).map(
+      (option, index) => ({ ...option, sortOrder: index })
+    )
+
+    // Optimistic UI update so the new order reflects immediately
+    onReorderOptions?.(reordered)
+
+    // Persist every option whose position actually changed. We compare each
+    // option against its OWN previous sortOrder (matched by id) so the new
+    // order survives navigation, re-renders, and import/export.
+    const changed = reordered.filter((option) => {
+      const original = options.find((o) => o.id === option.id)
+      return !original || original.sortOrder !== option.sortOrder
+    })
+
+    await Promise.all(
+      changed.map((option) =>
+        onUpdateOption(option.id, { sortOrder: option.sortOrder })
+      )
+    )
   }
 
   const getEffectLabel = (effect: OptionEffect) => {
@@ -326,7 +329,14 @@ export function OptionManager({
     <Card className="flex flex-col">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">옵션 목록</CardTitle>
+          <CardTitle className="text-lg">
+            옵션 목록
+            {options.length > 0 && (
+              <span className="ml-2 text-sm font-normal text-muted-foreground">
+                {options.length}
+              </span>
+            )}
+          </CardTitle>
           <Button size="sm" variant="outline" onClick={startCreate} disabled={isLoading}>
             <Plus className="h-4 w-4" />
           </Button>
@@ -449,6 +459,12 @@ export function OptionManager({
           {options.length === 0 && !isCreating && (
             <p className="text-sm text-muted-foreground text-center py-4">
               옵션이 없습니다. 새 옵션을 생성하세요.
+            </p>
+          )}
+          {options.length > 1 && (
+            <p className="flex items-center gap-1 text-xs text-muted-foreground">
+              <GripVertical className="h-3 w-3" />
+              드래그하여 순서를 변경할 수 있습니다 (자동 저장)
             </p>
           )}
           {options.length > 0 && (

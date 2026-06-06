@@ -79,7 +79,14 @@ export function StoreManager({
     <Card className="flex flex-col">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">매장 목록</CardTitle>
+          <CardTitle className="text-lg">
+            매장 목록
+            {stores.length > 0 && (
+              <span className="ml-2 text-sm font-normal text-muted-foreground">
+                {stores.length}
+              </span>
+            )}
+          </CardTitle>
           <Button size="sm" variant="outline" onClick={startCreate} disabled={isLoading}>
             <Plus className="h-4 w-4" />
           </Button>

@@ -193,7 +193,14 @@ export function MenuManager({
     <Card className="flex flex-col">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">메뉴 목록</CardTitle>
+          <CardTitle className="text-lg">
+            메뉴 목록
+            {menus.length > 0 && (
+              <span className="ml-2 text-sm font-normal text-muted-foreground">
+                {menus.length}
+              </span>
+            )}
+          </CardTitle>
           <Button size="sm" variant="outline" onClick={startCreate} disabled={isLoading}>
             <Plus className="h-4 w-4" />
           </Button>
