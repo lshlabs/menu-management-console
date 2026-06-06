@@ -18,13 +18,13 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { Plus, Edit2, Trash2, Check, X, GripVertical } from "lucide-react"
+import { Plus, Edit2, Trash2, Check, X, Copy, GripVertical, MoreVertical } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Switch } from "@/components/ui/switch"
+import { cn } from "@/lib/utils"
 import {
   Select,
   SelectContent,
@@ -32,6 +32,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
 import type { Option, OptionGroup, Menu, OptionEffect } from "@/lib/types"
 
 const OPTION_EFFECTS: OptionEffect[] = ["NONE", "ADD", "EXCLUDE", "REPLACE", "NOTE"]
@@ -41,6 +48,7 @@ interface SortableOptionItemProps {
   linkableMenus: Menu[]
   onEdit: () => void
   onDelete: () => void
+  onClone: () => void
   getEffectLabel: (effect: OptionEffect) => string
   getEffectBadgeVariant: (effect: OptionEffect) => "default" | "destructive" | "secondary" | "outline"
 }
@@ -50,6 +58,7 @@ function SortableOptionItem({
   linkableMenus,
   onEdit,
   onDelete,
+  onClone,
   getEffectLabel,
   getEffectBadgeVariant,
 }: SortableOptionItemProps) {
@@ -118,24 +127,32 @@ function SortableOptionItem({
             )}
           </p>
         </div>
-        <div className="flex gap-1 shrink-0">
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-7 w-7"
-            onClick={onEdit}
-          >
-            <Edit2 className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-7 w-7 text-destructive hover:text-destructive"
-            onClick={onDelete}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7 shrink-0"
+            >
+              <MoreVertical className="h-3.5 w-3.5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="bottom" align="end">
+            <DropdownMenuItem onClick={onClone}>
+              <Copy />
+              복제
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onEdit}>
+              <Edit2 />
+              수정
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onClick={onDelete}>
+              <Trash2 />
+              삭제
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   )
@@ -146,11 +163,17 @@ interface OptionManagerProps {
   selectedOptionGroup: OptionGroup | null
   linkableMenus: Menu[]
   onCreateOption: (data: Omit<Option, "id" | "createdAt" | "updatedAt">) => Promise<void>
+  onCreateOptionWithMenu: (data: Omit<Option, "id" | "createdAt" | "updatedAt">) => Promise<Menu>
   onUpdateOption: (
     id: string,
     data: Partial<Omit<Option, "id" | "createdAt" | "updatedAt">>
   ) => Promise<void>
+  onUpdateOptionWithMenu: (
+    id: string,
+    data: Partial<Omit<Option, "id" | "createdAt" | "updatedAt">>
+  ) => Promise<Menu>
   onDeleteOption: (id: string) => Promise<void>
+  onCloneOption: (id: string) => Promise<void>
   onReorderOptions?: (reorderedOptions: Option[]) => void
   isLoading: boolean
 }
@@ -160,13 +183,20 @@ export function OptionManager({
   selectedOptionGroup,
   linkableMenus,
   onCreateOption,
+  onCreateOptionWithMenu,
   onUpdateOption,
+  onUpdateOptionWithMenu,
   onDeleteOption,
+  onCloneOption,
   onReorderOptions,
   isLoading,
 }: OptionManagerProps) {
   const [isCreating, setIsCreating] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [addAsMenu, setAddAsMenu] = useState(false)
+  // Menus created via "메뉴로 추가" during this session — supplements linkableMenus
+  // so the card renders the correct name immediately without waiting for a re-fetch.
+  const [pendingMenus, setPendingMenus] = useState<Menu[]>([])
   const [formData, setFormData] = useState<{
     name: string
     effect: OptionEffect
@@ -203,29 +233,42 @@ export function OptionManager({
       isDefaultSelected: false,
       isAvailable: true,
     })
+    setAddAsMenu(false)
     setIsCreating(false)
     setEditingId(null)
   }
 
   const handleCreate = async () => {
     if (!formData.name.trim() || !selectedOptionGroup) return
-    await onCreateOption({
+    const payload = {
       ...formData,
       additionalPrice: parseFloat(formData.additionalPrice) || 0,
       optionGroupId: selectedOptionGroup.id,
       sortOrder: options.length,
-    })
+    }
+    if (addAsMenu) {
+      const newMenu = await onCreateOptionWithMenu(payload)
+      setPendingMenus((prev) => [...prev, newMenu])
+    } else {
+      await onCreateOption(payload)
+    }
     resetForm()
   }
 
   const handleUpdate = async () => {
     if (!editingId || !formData.name.trim()) return
     const currentOption = options.find((o) => o.id === editingId)
-    await onUpdateOption(editingId, {
+    const payload = {
       ...formData,
       additionalPrice: parseFloat(formData.additionalPrice) || 0,
       sortOrder: currentOption?.sortOrder ?? 0,
-    })
+    }
+    if (addAsMenu) {
+      const newMenu = await onUpdateOptionWithMenu(editingId, payload)
+      setPendingMenus((prev) => [...prev, newMenu])
+    } else {
+      await onUpdateOption(editingId, payload)
+    }
     resetForm()
   }
 
@@ -317,6 +360,8 @@ export function OptionManager({
     }
   }
 
+  const allLinkableMenus = [...linkableMenus, ...pendingMenus.filter((pm) => !linkableMenus.some((m) => m.id === pm.id))]
+
   if (!selectedOptionGroup) {
     return (
       <Card className="flex items-center justify-center min-h-[200px]">
@@ -330,19 +375,14 @@ export function OptionManager({
   return (
     <Card className="flex flex-col">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">
-            옵션 목록
-            {options.length > 0 && (
-              <span className="ml-2 text-sm font-normal text-muted-foreground">
-                {options.length}
-              </span>
-            )}
-          </CardTitle>
-          <Button size="sm" variant="outline" onClick={startCreate} disabled={isLoading}>
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
+        <CardTitle className="text-lg">
+          옵션 목록
+          {options.length > 0 && (
+            <span className="ml-2 text-sm font-normal text-muted-foreground">
+              {options.length}
+            </span>
+          )}
+        </CardTitle>
         <p className="text-xs text-muted-foreground">
           그룹: {selectedOptionGroup.name}
         </p>
@@ -396,20 +436,21 @@ export function OptionManager({
             <div className="space-y-2">
               <Label htmlFor="opt-linked">연결 메뉴 (사이드/음료)</Label>
               <Select
-                value={formData.linkedMenuId || "none"}
+                value={addAsMenu ? "none" : (formData.linkedMenuId || "none")}
                 onValueChange={(value) =>
                   setFormData({
                     ...formData,
                     linkedMenuId: value === "none" ? null : value,
                   })
                 }
+                disabled={addAsMenu}
               >
                 <SelectTrigger id="opt-linked">
-                  <SelectValue placeholder="연결 메뉴 없음" />
+                  <SelectValue placeholder={addAsMenu ? "자동 연결됩니다" : "연결 메뉴 없음"} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">연결 메뉴 없음</SelectItem>
-                  {linkableMenus.map((menu) => (
+                  {allLinkableMenus.map((menu) => (
                     <SelectItem key={menu.id} value={menu.id}>
                       {menu.name} ({menu.type === "SIDE" ? "사이드" : "음료"})
                     </SelectItem>
@@ -417,27 +458,47 @@ export function OptionManager({
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="opt-default"
-                  checked={formData.isDefaultSelected}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, isDefaultSelected: checked })
-                  }
-                />
-                <Label htmlFor="opt-default">기본 선택</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="opt-available"
-                  checked={formData.isAvailable}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, isAvailable: checked })
-                  }
-                />
-                <Label htmlFor="opt-available">사용 가능</Label>
-              </div>
+            <div className="flex flex-row items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setFormData((prev) => ({ ...prev, isDefaultSelected: !prev.isDefaultSelected }))}
+                className={cn(
+                  "px-3 py-1.5 rounded-md text-sm font-medium border transition-colors",
+                  formData.isDefaultSelected
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-transparent text-muted-foreground border-border hover:border-foreground/40 hover:text-foreground"
+                )}
+              >
+                기본 선택
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormData((prev) => ({ ...prev, isAvailable: !prev.isAvailable }))}
+                className={cn(
+                  "px-3 py-1.5 rounded-md text-sm font-medium border transition-colors",
+                  formData.isAvailable
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-transparent text-muted-foreground border-border hover:border-foreground/40 hover:text-foreground"
+                )}
+              >
+                사용 가능
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !addAsMenu
+                  setAddAsMenu(next)
+                  if (next) setFormData((prev) => ({ ...prev, linkedMenuId: null }))
+                }}
+                className={cn(
+                  "px-3 py-1.5 rounded-md text-sm font-medium border transition-colors",
+                  addAsMenu
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-transparent text-muted-foreground border-border hover:border-foreground/40 hover:text-foreground"
+                )}
+              >
+                메뉴로 추가
+              </button>
             </div>
             <div className="flex gap-2">
               <Button
@@ -457,11 +518,6 @@ export function OptionManager({
         )}
 
         <div className="space-y-2">
-          {options.length === 0 && !isCreating && (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              옵션이 없습니다. 새 옵션을 생성하세요.
-            </p>
-          )}
           {options.length > 0 && (
             <DndContext
               sensors={sensors}
@@ -476,15 +532,26 @@ export function OptionManager({
                   <SortableOptionItem
                     key={option.id}
                     option={option}
-                    linkableMenus={linkableMenus}
+                    linkableMenus={allLinkableMenus}
                     onEdit={() => startEdit(option)}
                     onDelete={() => onDeleteOption(option.id)}
+                    onClone={() => onCloneOption(option.id)}
                     getEffectLabel={getEffectLabel}
                     getEffectBadgeVariant={getEffectBadgeVariant}
                   />
                 ))}
               </SortableContext>
             </DndContext>
+          )}
+          {!isCreating && (
+            <button
+              type="button"
+              disabled={isLoading}
+              onClick={startCreate}
+              className="w-full rounded-lg border border-dashed border-muted-foreground/40 bg-transparent py-3 flex items-center justify-center text-muted-foreground hover:border-muted-foreground/70 hover:bg-muted/30 hover:text-foreground transition-colors cursor-pointer disabled:pointer-events-none disabled:opacity-50"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
           )}
         </div>
       </CardContent>

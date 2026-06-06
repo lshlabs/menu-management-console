@@ -18,7 +18,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { Plus, Edit2, Trash2, Check, X, Copy, GripVertical } from "lucide-react"
+import { Plus, Edit2, Trash2, Check, X, Copy, GripVertical, MoreVertical } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -26,20 +26,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
 import type { Menu, OptionGroup, SelectionType } from "@/lib/types"
 
 const SELECTION_TYPES: SelectionType[] = ["RADIO", "CHECKBOX"]
@@ -47,22 +39,19 @@ const SELECTION_TYPES: SelectionType[] = ["RADIO", "CHECKBOX"]
 interface SortableOptionGroupItemProps {
   og: OptionGroup
   isSelected: boolean
-  targetMenusCount: number
   onSelect: () => void
   onEdit: () => void
   onDelete: () => void
-  onDuplicate: () => void
-  getTypeLabel: (type: string) => string
+  onClone: () => void
 }
 
 function SortableOptionGroupItem({
   og,
   isSelected,
-  targetMenusCount,
   onSelect,
   onEdit,
   onDelete,
-  onDuplicate,
+  onClone,
 }: SortableOptionGroupItemProps) {
   const {
     attributes,
@@ -119,44 +108,33 @@ function SortableOptionGroupItem({
             선택: {og.minSelect}~{og.maxSelect}개
           </p>
         </div>
-        <div className="flex gap-1 shrink-0">
-          {targetMenusCount > 0 && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
             <Button
               size="icon"
               variant="ghost"
-              className="h-7 w-7"
-              onClick={(e) => {
-                e.stopPropagation()
-                onDuplicate()
-              }}
-              title="다른 메뉴로 복사"
+              className="h-7 w-7 shrink-0"
+              onClick={(e) => e.stopPropagation()}
             >
-              <Copy className="h-3.5 w-3.5" />
+              <MoreVertical className="h-3.5 w-3.5" />
             </Button>
-          )}
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-7 w-7"
-            onClick={(e) => {
-              e.stopPropagation()
-              onEdit()
-            }}
-          >
-            <Edit2 className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-7 w-7 text-destructive hover:text-destructive"
-            onClick={(e) => {
-              e.stopPropagation()
-              onDelete()
-            }}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="bottom" align="end">
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onClone() }}>
+              <Copy />
+              복제
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit() }}>
+              <Edit2 />
+              수정
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onClick={(e) => { e.stopPropagation(); onDelete() }}>
+              <Trash2 />
+              삭제
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   )
@@ -166,7 +144,6 @@ interface OptionGroupManagerProps {
   optionGroups: OptionGroup[]
   selectedOptionGroup: OptionGroup | null
   selectedMenu: Menu | null
-  targetMenus: Menu[]
   onSelectOptionGroup: (og: OptionGroup) => void
   onCreateOptionGroup: (
     data: Omit<OptionGroup, "id" | "createdAt" | "updatedAt">
@@ -176,14 +153,7 @@ interface OptionGroupManagerProps {
     data: Partial<Omit<OptionGroup, "id" | "createdAt" | "updatedAt">>
   ) => Promise<void>
   onDeleteOptionGroup: (id: string) => Promise<void>
-  onDuplicateOptionGroup: (
-    optionGroupId: string,
-    targetMenuId: string
-  ) => Promise<void>
-  onDuplicateAllOptionGroups: (
-    sourceMenuId: string,
-    targetMenuId: string
-  ) => Promise<void>
+  onCloneOptionGroup: (id: string) => Promise<void>
   onReorderOptionGroups?: (reorderedGroups: OptionGroup[]) => void
   isLoading: boolean
 }
@@ -192,22 +162,16 @@ export function OptionGroupManager({
   optionGroups,
   selectedOptionGroup,
   selectedMenu,
-  targetMenus,
   onSelectOptionGroup,
   onCreateOptionGroup,
   onUpdateOptionGroup,
   onDeleteOptionGroup,
-  onDuplicateOptionGroup,
-  onDuplicateAllOptionGroups,
+  onCloneOptionGroup,
   onReorderOptionGroups,
   isLoading,
 }: OptionGroupManagerProps) {
   const [isCreating, setIsCreating] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false)
-  const [duplicateAllDialogOpen, setDuplicateAllDialogOpen] = useState(false)
-  const [duplicatingGroupId, setDuplicatingGroupId] = useState<string | null>(null)
-  const [targetMenuId, setTargetMenuId] = useState<string>("")
   const [formData, setFormData] = useState<{
     name: string
     selectionType: SelectionType
@@ -307,32 +271,6 @@ export function OptionGroupManager({
     })
   }
 
-  const openDuplicateDialog = (groupId: string) => {
-    setDuplicatingGroupId(groupId)
-    setTargetMenuId("")
-    setDuplicateDialogOpen(true)
-  }
-
-  const openDuplicateAllDialog = () => {
-    setTargetMenuId("")
-    setDuplicateAllDialogOpen(true)
-  }
-
-  const handleDuplicate = async () => {
-    if (!duplicatingGroupId || !targetMenuId) return
-    await onDuplicateOptionGroup(duplicatingGroupId, targetMenuId)
-    setDuplicateDialogOpen(false)
-    setDuplicatingGroupId(null)
-    setTargetMenuId("")
-  }
-
-  const handleDuplicateAll = async () => {
-    if (!selectedMenu || !targetMenuId) return
-    await onDuplicateAllOptionGroups(selectedMenu.id, targetMenuId)
-    setDuplicateAllDialogOpen(false)
-    setTargetMenuId("")
-  }
-
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
 
@@ -411,35 +349,16 @@ export function OptionGroupManager({
   }
 
   return (
-    <>
-      <Card className="flex flex-col">
+    <Card className="flex flex-col">
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between gap-2">
-            <CardTitle className="text-lg">
-              옵션 그룹
-              {optionGroups.length > 0 && (
-                <span className="ml-2 text-sm font-normal text-muted-foreground">
-                  {optionGroups.length}
-                </span>
-              )}
-            </CardTitle>
-            <div className="flex gap-1">
-              {optionGroups.length > 0 && targetMenus.length > 0 && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={openDuplicateAllDialog}
-                  disabled={isLoading}
-                  title="다른 메뉴로 전체 복사"
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-              )}
-              <Button size="sm" variant="outline" onClick={startCreate} disabled={isLoading}>
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+          <CardTitle className="text-lg">
+            옵션 그룹
+            {optionGroups.length > 0 && (
+              <span className="ml-2 text-sm font-normal text-muted-foreground">
+                {optionGroups.length}
+              </span>
+            )}
+          </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4 pt-0">
           {(isCreating || editingId) && (
@@ -584,11 +503,6 @@ export function OptionGroupManager({
           )}
 
           <div className="space-y-2">
-            {optionGroups.length === 0 && !isCreating && (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                옵션 그룹이 없습니다. 새 그룹을 생성하세요.
-              </p>
-            )}
             {optionGroups.length > 0 && (
               <DndContext
                 sensors={sensors}
@@ -604,94 +518,28 @@ export function OptionGroupManager({
                       key={og.id}
                       og={og}
                       isSelected={selectedOptionGroup?.id === og.id}
-                      targetMenusCount={targetMenus.length}
                       onSelect={() => onSelectOptionGroup(og)}
                       onEdit={() => startEdit(og)}
                       onDelete={() => onDeleteOptionGroup(og.id)}
-                      onDuplicate={() => openDuplicateDialog(og.id)}
-                      getTypeLabel={getTypeLabel}
+                      onClone={() => onCloneOptionGroup(og.id)}
                     />
                   ))}
                 </SortableContext>
               </DndContext>
             )}
+            {!isCreating && (
+              <button
+                type="button"
+                disabled={isLoading}
+                onClick={startCreate}
+                className="w-full rounded-lg border border-dashed border-muted-foreground/40 bg-transparent py-3 flex items-center justify-center text-muted-foreground hover:border-muted-foreground/70 hover:bg-muted/30 hover:text-foreground transition-colors cursor-pointer disabled:pointer-events-none disabled:opacity-50"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Duplicate single group dialog */}
-      <Dialog open={duplicateDialogOpen} onOpenChange={setDuplicateDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>옵션 그룹 복사</DialogTitle>
-            <DialogDescription>
-              이 옵션 그룹과 하위 옵션들을 복사할 대상 메뉴를 선택하세요.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>대상 메뉴</Label>
-              <Select value={targetMenuId} onValueChange={setTargetMenuId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="메뉴를 선택하세요" />
-                </SelectTrigger>
-                <SelectContent>
-                  {targetMenus.map((menu) => (
-                    <SelectItem key={menu.id} value={menu.id}>
-                      {menu.name} ({getTypeLabel(menu.type)})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDuplicateDialogOpen(false)}>
-              취소
-            </Button>
-            <Button onClick={handleDuplicate} disabled={!targetMenuId || isLoading}>
-              복사
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Duplicate all groups dialog */}
-      <Dialog open={duplicateAllDialogOpen} onOpenChange={setDuplicateAllDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>전체 옵션 그룹 복사</DialogTitle>
-            <DialogDescription>
-              <strong>{selectedMenu?.name}</strong>의 모든 옵션 그룹과 옵션을 다른 메뉴로 복사합니다.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>대상 메뉴</Label>
-              <Select value={targetMenuId} onValueChange={setTargetMenuId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="메뉴를 선택하세요" />
-                </SelectTrigger>
-                <SelectContent>
-                  {targetMenus.map((menu) => (
-                    <SelectItem key={menu.id} value={menu.id}>
-                      {menu.name} ({getTypeLabel(menu.type)})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDuplicateAllDialogOpen(false)}>
-              취소
-            </Button>
-            <Button onClick={handleDuplicateAll} disabled={!targetMenuId || isLoading}>
-              전체 복사
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
   )
 }

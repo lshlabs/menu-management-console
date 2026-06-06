@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Plus, Edit2, Trash2, Check, X } from "lucide-react"
+import { Plus, Edit2, Trash2, Check, X, MoreVertical } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -9,6 +9,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
 import type { Store } from "@/lib/types"
 
 interface StoreManagerProps {
@@ -76,19 +83,14 @@ export function StoreManager({
   return (
     <Card className="flex flex-col">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">
-            매장 목록
-            {stores.length > 0 && (
-              <span className="ml-2 text-sm font-normal text-muted-foreground">
-                {stores.length}
-              </span>
-            )}
-          </CardTitle>
-          <Button size="sm" variant="outline" onClick={startCreate} disabled={isLoading}>
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
+        <CardTitle className="text-lg">
+          매장 목록
+          {stores.length > 0 && (
+            <span className="ml-2 text-sm font-normal text-muted-foreground">
+              {stores.length}
+            </span>
+          )}
+        </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4 pt-0">
         {(isCreating || editingId) && (
@@ -130,12 +132,7 @@ export function StoreManager({
         )}
 
         <ScrollArea className="max-h-[280px]">
-          <div className="space-y-2 pr-4">
-            {stores.length === 0 && !isCreating && (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                등록된 매장이 없습니다. 새 매장을 생성하세요.
-              </p>
-            )}
+          <div className="space-y-2">
             {stores.map((store) => (
               <div
                 key={store.id}
@@ -158,33 +155,42 @@ export function StoreManager({
                       </Badge>
                     </div>
                   </div>
-                  <div className="flex gap-1 shrink-0">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-7 w-7"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        startEdit(store)
-                      }}
-                    >
-                      <Edit2 className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-7 w-7 text-destructive hover:text-destructive"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onDeleteStore(store.id)
-                      }}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 shrink-0"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <MoreVertical className="h-3.5 w-3.5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent side="bottom" align="end">
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); startEdit(store) }}>
+                        <Edit2 />
+                        수정
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem variant="destructive" onClick={(e) => { e.stopPropagation(); onDeleteStore(store.id) }}>
+                        <Trash2 />
+                        삭제
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             ))}
+            {!isCreating && !editingId && (
+              <button
+                type="button"
+                disabled={isLoading}
+                onClick={startCreate}
+                className="w-full rounded-lg border border-dashed border-muted-foreground/40 bg-transparent py-3 flex items-center justify-center text-muted-foreground hover:border-muted-foreground/70 hover:bg-muted/30 hover:text-foreground transition-colors cursor-pointer disabled:pointer-events-none disabled:opacity-50"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            )}
           </div>
         </ScrollArea>
       </CardContent>

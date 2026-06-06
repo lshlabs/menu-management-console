@@ -37,6 +37,8 @@ import {
   apiDeleteOption,
   apiDuplicateOptionGroup,
   apiDuplicateAllOptionGroups,
+  apiCloneOptionGroup,
+  apiCloneOption,
   apiExportCatalog,
   apiImportCatalog,
   apiGetLinkableMenus,
@@ -254,7 +256,7 @@ export default function MenuManagementPage() {
       setMenus((prev) => [...prev, menu])
       toast.success(`"${menu.name}" 메뉴가 생성되었습니다`)
     } catch (error) {
-      toast.error("메뉴 생성에 실패했습니다")
+      toast.error("메��� 생성에 실패했습니다")
       console.error(error)
     } finally {
       setIsLoading(false)
@@ -417,6 +419,123 @@ export default function MenuManagementPage() {
     } catch (error) {
       toast.error("옵션 그룹 복사에 실패했습니다")
       console.error(error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleCloneOptionGroup = async (id: string) => {
+    setIsLoading(true)
+    try {
+      const cloned = await apiCloneOptionGroup(id)
+      setOptionGroups((prev) => [...prev, cloned])
+      toast.success(`"${cloned.name}" 옵션 그룹이 복제되었습니다`)
+    } catch (error) {
+      toast.error("옵션 그룹 복제에 실패했습니다")
+      console.error(error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleCloneOption = async (id: string) => {
+    setIsLoading(true)
+    try {
+      const cloned = await apiCloneOption(id)
+      setOptions((prev) => {
+        const next = new Map(prev)
+        const existing = next.get(cloned.optionGroupId) || []
+        next.set(
+          cloned.optionGroupId,
+          [...existing, cloned].sort((a, b) => a.sortOrder - b.sortOrder)
+        )
+        return next
+      })
+      toast.success(`"${cloned.name}" 옵션이 복제되었습니다`)
+    } catch (error) {
+      toast.error("옵션 복제에 실패했습니다")
+      console.error(error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleCreateOptionWithMenu = async (
+    data: Omit<Option, "id" | "createdAt" | "updatedAt">
+  ): Promise<Menu> => {
+    if (!selectedMenu) throw new Error("No menu selected")
+    setIsLoading(true)
+    try {
+      const newMenu = await apiCreateMenu({
+        storeId: selectedMenu.storeId,
+        name: data.name,
+        type: "SIDE",
+        basePrice: data.additionalPrice,
+        allergens: [],
+        isAvailable: true,
+        sortOrder: menus.length,
+      })
+      setMenus((prev) => [...prev, newMenu])
+
+      const opt = await apiCreateOption({ ...data, linkedMenuId: newMenu.id })
+      setOptions((prev) => {
+        const next = new Map(prev)
+        const existing = next.get(opt.optionGroupId) || []
+        next.set(
+          opt.optionGroupId,
+          [...existing, opt].sort((a, b) => a.sortOrder - b.sortOrder)
+        )
+        return next
+      })
+
+      toast.success(`"${opt.name}" 옵션과 연결 메뉴가 생성되었습니다`)
+      return newMenu
+    } catch (error) {
+      toast.error("옵션/메뉴 생성에 실패했습니다")
+      console.error(error)
+      throw error
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleUpdateOptionWithMenu = async (
+    id: string,
+    data: Partial<Omit<Option, "id" | "createdAt" | "updatedAt">>
+  ): Promise<Menu> => {
+    if (!selectedMenu) throw new Error("No menu selected")
+    setIsLoading(true)
+    try {
+      const newMenu = await apiCreateMenu({
+        storeId: selectedMenu.storeId,
+        name: (data.name as string) ?? "",
+        type: "SIDE",
+        basePrice: (data.additionalPrice as number) ?? 0,
+        allergens: [],
+        isAvailable: true,
+        sortOrder: menus.length,
+      })
+      setMenus((prev) => [...prev, newMenu])
+
+      const opt = await apiUpdateOption(id, { ...data, linkedMenuId: newMenu.id })
+      setOptions((prev) => {
+        const next = new Map(prev)
+        const existing = next.get(opt.optionGroupId) || []
+        next.set(
+          opt.optionGroupId,
+          existing
+            .map((o) => (o.id === id ? opt : o))
+            .sort((a, b) => a.sortOrder - b.sortOrder)
+        )
+        return next
+      })
+
+      toast.success(`"${opt.name}" 옵션과 연결 메뉴가 생성되었습니다`)
+      return newMenu
+    } catch (error) {
+      toast.error("옵션/메뉴 생성에 실패했습니다")
+      console.error(error)
+      throw error
     } finally {
       setIsLoading(false)
     }
@@ -690,13 +809,11 @@ export default function MenuManagementPage() {
             optionGroups={optionGroups}
             selectedOptionGroup={selectedOptionGroup}
             selectedMenu={selectedMenu}
-            targetMenus={targetMenus}
             onSelectOptionGroup={setSelectedOptionGroup}
             onCreateOptionGroup={handleCreateOptionGroup}
             onUpdateOptionGroup={handleUpdateOptionGroup}
             onDeleteOptionGroup={handleDeleteOptionGroup}
-            onDuplicateOptionGroup={handleDuplicateOptionGroup}
-            onDuplicateAllOptionGroups={handleDuplicateAllOptionGroups}
+            onCloneOptionGroup={handleCloneOptionGroup}
             onReorderOptionGroups={handleReorderOptionGroups}
             isLoading={isLoading}
           />
@@ -709,8 +826,11 @@ export default function MenuManagementPage() {
             selectedOptionGroup={selectedOptionGroup}
             linkableMenus={linkableMenus}
             onCreateOption={handleCreateOption}
+            onCreateOptionWithMenu={handleCreateOptionWithMenu}
             onUpdateOption={handleUpdateOption}
+            onUpdateOptionWithMenu={handleUpdateOptionWithMenu}
             onDeleteOption={handleDeleteOption}
+            onCloneOption={handleCloneOption}
             onReorderOptions={handleReorderOptions}
             isLoading={isLoading}
           />
