@@ -83,19 +83,14 @@ export function StoreManager({
   return (
     <Card className="flex flex-col">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">
-            매장 목록
-            {stores.length > 0 && (
-              <span className="ml-2 text-sm font-normal text-muted-foreground">
-                {stores.length}
-              </span>
-            )}
-          </CardTitle>
-          <Button size="sm" variant="outline" onClick={startCreate} disabled={isLoading}>
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
+        <CardTitle className="text-lg">
+          매장 목록
+          {stores.length > 0 && (
+            <span className="ml-2 text-sm font-normal text-muted-foreground">
+              {stores.length}
+            </span>
+          )}
+        </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4 pt-0">
         {(isCreating || editingId) && (
@@ -138,11 +133,6 @@ export function StoreManager({
 
         <ScrollArea className="max-h-[280px]">
           <div className="space-y-2 pr-4">
-            {stores.length === 0 && !isCreating && (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                등록된 매장이 없습니다. 새 매장을 생성하세요.
-              </p>
-            )}
             {stores.map((store) => (
               <div
                 key={store.id}
@@ -191,6 +181,16 @@ export function StoreManager({
                 </div>
               </div>
             ))}
+            {!isCreating && !editingId && (
+              <button
+                type="button"
+                disabled={isLoading}
+                onClick={startCreate}
+                className="w-full rounded-lg border border-dashed border-muted-foreground/40 bg-transparent py-3 flex items-center justify-center text-muted-foreground hover:border-muted-foreground/70 hover:bg-muted/30 hover:text-foreground transition-colors cursor-pointer disabled:pointer-events-none disabled:opacity-50"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            )}
           </div>
         </ScrollArea>
       </CardContent>
