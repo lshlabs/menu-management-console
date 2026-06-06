@@ -26,6 +26,7 @@ import {
   apiCreateMenu,
   apiUpdateMenu,
   apiDeleteMenu,
+  apiCloneMenu,
   apiGetOptionGroups,
   apiCreateOptionGroup,
   apiUpdateOptionGroup,
@@ -297,6 +298,27 @@ export default function MenuManagementPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleCloneMenu = async (id: string) => {
+    if (!selectedStore) return
+    setIsLoading(true)
+    try {
+      const cloned = await apiCloneMenu(id)
+      const data = await apiGetMenus(selectedStore.id)
+      setMenus(data)
+      toast.success(`"${cloned.name}" 메뉴가 복제되었습니다`)
+    } catch (error) {
+      toast.error("메뉴 복제에 실패했습니다")
+      console.error(error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Reorder menus (immediate state update for real-time reflection)
+  const handleReorderMenus = (reorderedMenus: Menu[]) => {
+    setMenus(reorderedMenus)
   }
 
   // OptionGroup handlers
@@ -660,6 +682,8 @@ export default function MenuManagementPage() {
             onCreateMenu={handleCreateMenu}
             onUpdateMenu={handleUpdateMenu}
             onDeleteMenu={handleDeleteMenu}
+            onCloneMenu={handleCloneMenu}
+            onReorderMenus={handleReorderMenus}
             isLoading={isLoading}
           />
           <OptionGroupManager

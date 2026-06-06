@@ -217,11 +217,6 @@ export default function OrdersPage() {
                       {selectedStore.isActive ? "영업중" : "휴업"}
                     </Badge>
                   </div>
-                  {selectedStore.address && (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {selectedStore.address}
-                    </p>
-                  )}
                 </div>
               )}
 

@@ -37,12 +37,11 @@ export function StoreManager({
   const [editingId, setEditingId] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     name: "",
-    address: "",
     isActive: true,
   })
 
   const resetForm = () => {
-    setFormData({ name: "", address: "", isActive: true })
+    setFormData({ name: "", isActive: true })
     setIsCreating(false)
     setEditingId(null)
   }
@@ -63,7 +62,6 @@ export function StoreManager({
     setEditingId(store.id)
     setFormData({
       name: store.name,
-      address: store.address,
       isActive: store.isActive,
     })
     setIsCreating(false)
@@ -72,7 +70,7 @@ export function StoreManager({
   const startCreate = () => {
     setIsCreating(true)
     setEditingId(null)
-    setFormData({ name: "", address: "", isActive: true })
+    setFormData({ name: "", isActive: true })
   }
 
   return (
@@ -102,15 +100,6 @@ export function StoreManager({
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="매장 이름을 입력하세요"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="store-address">주소</Label>
-              <Input
-                id="store-address"
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                placeholder="매장 주소를 입력하세요"
               />
             </div>
             <div className="flex items-center gap-2">
@@ -168,11 +157,6 @@ export function StoreManager({
                         {store.isActive ? "운영중" : "휴업"}
                       </Badge>
                     </div>
-                    {store.address && (
-                      <p className="text-sm text-muted-foreground truncate mt-1">
-                        {store.address}
-                      </p>
-                    )}
                   </div>
                   <div className="flex gap-1 shrink-0">
                     <Button

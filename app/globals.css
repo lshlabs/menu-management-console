@@ -127,4 +127,16 @@
   html {
     @apply font-sans;
   }
+
+  /* Hide the browser's default numeric spinners/arrows on number inputs */
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
 }

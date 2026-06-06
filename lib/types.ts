@@ -5,7 +5,7 @@ export type OptionEffect = "NONE" | "ADD" | "EXCLUDE" | "REPLACE" | "NOTE"
 export interface Store {
   id: string
   name: string
-  address: string
+  address?: string
   isActive: boolean
   createdAt: string
   updatedAt: string
@@ -19,6 +19,7 @@ export interface Menu {
   basePrice: number
   allergens: string[]
   isAvailable: boolean
+  sortOrder: number
   createdAt: string
   updatedAt: string
 }
