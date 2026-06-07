@@ -50,13 +50,13 @@ export function MenuDetail({
     <Card className="flex flex-col overflow-hidden">
       <ScrollArea className="flex-1">
       {/* Header: 타이틀 + 상태 배지 */}
-      <div className="flex items-center justify-between px-5 pt-5 pb-4">
-        <h2 className="text-lg font-bold tracking-tight text-foreground">
+      <div className="flex items-start justify-between px-5 pt-6 pb-5">
+        <h2 className="text-2xl font-bold tracking-tight text-foreground">
           메뉴 상세
         </h2>
         <Badge
           variant={menu.isAvailable ? "default" : "secondary"}
-          className="rounded-full px-3 py-1 text-xs font-semibold"
+          className="rounded-full px-3 py-1 text-sm font-semibold"
         >
           {menu.isAvailable ? "판매중" : "품절"}
         </Badge>
@@ -72,21 +72,13 @@ export function MenuDetail({
           </span>
         </div>
 
-        {/* ID + 유형 */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex flex-col gap-0.5">
-            <span className="text-xs text-muted-foreground">ID</span>
-            <span className="font-mono text-xs text-foreground truncate">
-              {menu.id}
-            </span>
-          </div>
-          <div className="flex flex-col gap-0.5">
-            <span className="text-xs text-muted-foreground">유형</span>
-            <div>
-              <Badge variant="outline" className="rounded-full text-xs font-medium">
-                {getTypeLabel(menu.type)}
-              </Badge>
-            </div>
+        {/* 유형 (ID 제거) */}
+        <div className="flex flex-col gap-0.5">
+          <span className="text-xs text-muted-foreground">유형</span>
+          <div>
+            <Badge variant="outline" className="rounded-full text-xs font-medium">
+              {getTypeLabel(menu.type)}
+            </Badge>
           </div>
         </div>
 
@@ -130,7 +122,7 @@ export function MenuDetail({
           </div>
         ) : (
           <>
-            <p className="text-sm font-semibold text-foreground">
+            <p className="text-lg font-semibold text-foreground">
               옵션 그룹 ({optionGroups.length}개)
             </p>
             {optionGroups.length === 0 ? (
