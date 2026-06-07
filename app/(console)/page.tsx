@@ -16,7 +16,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Home } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import type { Store, Menu, OptionGroup, Option, CatalogData } from "@/lib/types"
 import {
@@ -771,36 +770,16 @@ export default function MenuManagementPage() {
           />
 
           {/* Col 4 — 메뉴 상세 패널 (인라인, 상시 노출) */}
-          <Card className="flex h-full flex-col overflow-hidden rounded-xl border shadow-sm">
-            <CardHeader className="border-b px-4 py-3">
-              <CardTitle className="text-sm font-semibold text-foreground">
-                메뉴 상세
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 p-0">
-              {selectedMenu ? (
-                <ScrollArea className="h-full">
-                  <div className="p-4">
-                    <MenuDetail
-                      menu={selectedMenu}
-                      optionGroups={optionGroups}
-                      options={options}
-                      linkableMenus={linkableMenus}
-                    />
-                  </div>
-                </ScrollArea>
-              ) : (
-                <div className="flex h-full min-h-[200px] flex-col items-center justify-center gap-2 p-6 text-center">
-                  <p className="text-sm font-medium text-muted-foreground">
-                    메뉴를 선택하면
-                  </p>
-                  <p className="text-xs text-muted-foreground/70">
-                    상세 정보가 여기에 표시됩니다
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <div className="flex h-full flex-col overflow-hidden rounded-xl border bg-background shadow-sm">
+            <ScrollArea className="flex-1">
+              <MenuDetail
+                menu={selectedMenu}
+                optionGroups={optionGroups}
+                options={options}
+                linkableMenus={linkableMenus}
+              />
+            </ScrollArea>
+          </div>
         </div>
       </div>
     </div>
