@@ -1,6 +1,8 @@
 "use client"
 
 import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import type { Menu, OptionGroup, Option } from "@/lib/types"
 
@@ -34,140 +36,185 @@ export function MenuDetail({
 
   if (!menu) {
     return (
-      <div className="flex items-center justify-center px-6 py-16">
+      <Card className="flex items-center justify-center min-h-[200px]">
         <p className="text-sm text-muted-foreground">
           메뉴를 선택하면 상세 정보가 표시됩니다
         </p>
-      </div>
+      </Card>
     )
   }
 
   const canHaveOptions = menu.type === "MAIN" || menu.type === "SET"
 
   return (
-    <div className="flex flex-col px-6 pb-6 pt-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <p className="text-base font-semibold">{menu.name}</p>
-          <Badge variant={menu.isAvailable ? "default" : "secondary"}>
-            {menu.isAvailable ? "판매중" : "품절"}
-          </Badge>
+    <Card className="flex flex-col overflow-hidden">
+      <ScrollArea className="flex-1">
+      {/* Header */}
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg">메뉴 상세</CardTitle>
+      </CardHeader>
+
+      {/* 기본 정보 */}
+      <div className="flex flex-col gap-3 px-5 pb-4">
+        {/* 메뉴명 */}
+        <div className="flex flex-col gap-0.5">
+          <span className="text-xs text-muted-foreground">메뉴명</span>
+          <span className="text-sm font-medium text-foreground">
+            {menu.name}
+          </span>
         </div>
-        <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-xs text-muted-foreground">ID</p>
-              <p className="font-mono text-xs truncate">{menu.id}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">유형</p>
-              <Badge variant="outline">{getTypeLabel(menu.type)}</Badge>
-            </div>
-          </div>
+
+        {/* 유형 (ID 제거) */}
+        <div className="flex flex-col gap-0.5">
+          <span className="text-xs text-muted-foreground">유형</span>
           <div>
-            <p className="text-xs text-muted-foreground">기본가격</p>
-            <p className="font-medium">{menu.basePrice.toLocaleString()}원</p>
+            <Badge variant="outline" className="rounded-full text-xs font-medium">
+              {getTypeLabel(menu.type)}
+            </Badge>
           </div>
-          {menu.allergens.length > 0 && (
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">알레르기 정보</p>
-              <div className="flex flex-wrap gap-1">
-                {menu.allergens.map((allergen) => (
-                  <Badge key={allergen} variant="secondary" className="text-xs">
-                    {allergen}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
-        <Separator />
+        {/* 기본가격 */}
+        <div className="flex flex-col gap-0.5">
+          <span className="text-xs text-muted-foreground">기본가격</span>
+          <span className="text-sm font-semibold text-foreground">
+            {menu.basePrice.toLocaleString()}원
+          </span>
+        </div>
 
+        {/* 알레르기 정보 */}
+        {menu.allergens.length > 0 && (
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs text-muted-foreground">알레르기 정보</span>
+            <div className="flex flex-wrap gap-1.5">
+              {menu.allergens.map((allergen) => (
+                <Badge
+                  key={allergen}
+                  variant="secondary"
+                  className="rounded-full px-2.5 py-0.5 text-xs font-medium"
+                >
+                  {allergen}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="px-5"><Separator /></div>
+
+      {/* 옵션 그룹 섹션 */}
+      <div className="flex flex-col gap-3 px-5 pt-4 pb-6">
         {!canHaveOptions ? (
-          <div className="text-center py-4">
+          <div className="flex flex-col items-center gap-2 py-6 text-center">
             <Badge variant="secondary">{getTypeLabel(menu.type)}</Badge>
-            <p className="text-sm text-muted-foreground mt-2">
+            <p className="text-sm text-muted-foreground">
               {getTypeLabel(menu.type)} 메뉴는 옵션 그룹을 가질 수 없습니다.
             </p>
           </div>
-        ) : optionGroups.length === 0 ? (
-          <div className="text-center py-4">
-            <p className="text-sm text-muted-foreground">
-              설정된 옵션 그룹이 없습니다.
-            </p>
-          </div>
         ) : (
-          <div className="space-y-4">
-            <p className="text-sm font-medium">
+          <>
+            <p className="text-sm font-semibold text-foreground">
               옵션 그룹 ({optionGroups.length}개)
             </p>
-            {optionGroups.map((group) => {
-                const groupOptions = options.get(group.id) || []
-                return (
-                  <div key={group.id} className="border rounded-lg p-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm">{group.name}</span>
-                        <Badge variant="outline" className="text-xs">
-                          {group.selectionType === "RADIO" ? "단일" : "다중"}
-                        </Badge>
-                        {group.isRequired && (
-                          <Badge className="text-xs">필수</Badge>
-                        )}
+            {optionGroups.length === 0 ? (
+              <p className="py-4 text-center text-sm text-muted-foreground">
+                설정된 옵션 그룹이 없습니다.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {optionGroups.map((group) => {
+                  const groupOptions = options.get(group.id) || []
+                  return (
+                    <div
+                      key={group.id}
+                      className="rounded-xl border border-border bg-white p-4"
+                    >
+                      {/* 그룹 헤더 */}
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-base font-bold text-foreground">
+                            {group.name}
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className="rounded-full px-2.5 py-0.5 text-xs font-medium"
+                          >
+                            {group.selectionType === "RADIO" ? "단일" : "다중"}
+                          </Badge>
+                          {group.isRequired && (
+                            <Badge className="rounded-full px-2.5 py-0.5 text-xs font-semibold">
+                              필수
+                            </Badge>
+                          )}
+                          {!group.isAvailable && (
+                            <Badge variant="secondary" className="rounded-full px-2.5 py-0.5 text-xs">
+                              비활성
+                            </Badge>
+                          )}
+                        </div>
                       </div>
-                      {!group.isAvailable && (
-                        <Badge variant="secondary" className="text-xs">
-                          비활성
-                        </Badge>
+
+                      {/* 선택 범위 */}
+                      <p className="text-sm text-muted-foreground mb-3">
+                        선택: {group.minSelect}~{group.maxSelect}개
+                      </p>
+
+                      {/* 옵션 목록 */}
+                      {groupOptions.length > 0 && (
+                        <div className="flex flex-col border-l-2 border-border ml-1 pl-1">
+                          {groupOptions.map((opt) => (
+                            <div
+                              key={opt.id}
+                              className="flex items-center justify-between pl-3 py-1 text-sm"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="text-foreground truncate">
+                                  {opt.name}
+                                </span>
+                                {opt.isDefaultSelected && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="rounded-full px-2.5 py-0.5 text-xs shrink-0"
+                                  >
+                                    기본
+                                  </Badge>
+                                )}
+                                {opt.linkedMenuId && (
+                                  <span className="text-xs text-muted-foreground shrink-0">
+                                    →{" "}
+                                    {linkableMenus.find(
+                                      (m) => m.id === opt.linkedMenuId
+                                    )?.name || "?"}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1.5 shrink-0 pl-2">
+                                {opt.additionalPrice !== 0 && (
+                                  <span className="text-sm text-foreground tabular-nums">
+                                    {opt.additionalPrice > 0 ? "+" : ""}
+                                    {opt.additionalPrice.toLocaleString()}원
+                                  </span>
+                                )}
+                                {!opt.isAvailable && (
+                                  <Badge variant="secondary" className="text-xs rounded-full">
+                                    N/A
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      선택: {group.minSelect}~{group.maxSelect}개
-                    </p>
-                    {groupOptions.length > 0 && (
-                      <div className="pl-3 border-l-2 border-muted space-y-1 mt-2">
-                        {groupOptions.map((opt) => (
-                          <div
-                            key={opt.id}
-                            className="flex items-center justify-between text-sm"
-                          >
-                            <div className="flex items-center gap-2">
-                              <span>{opt.name}</span>
-                              {opt.isDefaultSelected && (
-                                <Badge variant="secondary" className="text-xs">
-                                  기본
-                                </Badge>
-                              )}
-                              {opt.linkedMenuId && (
-                                <span className="text-xs text-muted-foreground">
-                                  →{" "}
-                                  {linkableMenus.find((m) => m.id === opt.linkedMenuId)
-                                    ?.name || "?"}
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              {opt.additionalPrice !== 0 && (
-                                <span className="text-xs">
-                                  {opt.additionalPrice > 0 ? "+" : ""}
-                                  {opt.additionalPrice.toLocaleString()}원
-                                </span>
-                              )}
-                              {!opt.isAvailable && (
-                                <Badge variant="secondary" className="text-xs">
-                                  N/A
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-          </div>
+                  )
+                })}
+              </div>
+            )}
+          </>
         )}
-    </div>
+      </div>
+      </ScrollArea>
+    </Card>
   )
 }

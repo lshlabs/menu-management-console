@@ -5,7 +5,6 @@ import { Plus, Edit2, Trash2, Check, X, MoreVertical } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -81,18 +80,21 @@ export function StoreManager({
   }
 
   return (
-    <Card className="flex flex-col">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg">
+    <div className="flex flex-col">
+      {/* Header */}
+      <div className="flex items-center border-b px-6 py-4">
+        <span className="text-base font-semibold">
           매장 목록
           {stores.length > 0 && (
             <span className="ml-2 text-sm font-normal text-muted-foreground">
               {stores.length}
             </span>
           )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4 pt-0">
+        </span>
+      </div>
+
+      {/* Body */}
+      <div className="flex flex-col gap-4 px-6 py-4">
         {(isCreating || editingId) && (
           <div className="space-y-3 p-3 bg-muted/50 rounded-lg border">
             <div className="space-y-2">
@@ -131,7 +133,7 @@ export function StoreManager({
           </div>
         )}
 
-        <ScrollArea className="max-h-[280px]">
+        <ScrollArea className="max-h-[60vh]">
           <div className="space-y-2">
             {stores.map((store) => (
               <div
@@ -193,7 +195,7 @@ export function StoreManager({
             )}
           </div>
         </ScrollArea>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
