@@ -49,18 +49,10 @@ export function MenuDetail({
   return (
     <Card className="flex flex-col overflow-hidden">
       <ScrollArea className="flex-1">
-      {/* Header: 타이틀 + 상태 배지 */}
-      <div className="flex items-center justify-between px-5 pt-4 pb-3">
-        <h2 className="text-lg font-semibold text-foreground">
-          메뉴 상세
-        </h2>
-        <Badge
-          variant={menu.isAvailable ? "default" : "secondary"}
-          className="rounded-full px-2.5 py-0.5 text-xs font-semibold"
-        >
-          {menu.isAvailable ? "판매중" : "품절"}
-        </Badge>
-      </div>
+      {/* Header */}
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg">메뉴 상세</CardTitle>
+      </CardHeader>
 
       {/* 기본 정보 */}
       <div className="flex flex-col gap-3 px-5 pb-4">
