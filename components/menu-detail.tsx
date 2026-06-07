@@ -50,24 +50,24 @@ export function MenuDetail({
     <Card className="flex flex-col overflow-hidden">
       <ScrollArea className="flex-1">
       {/* Header: 타이틀 + 상태 배지 */}
-      <div className="flex items-start justify-between px-5 pt-6 pb-5">
-        <h2 className="text-2xl font-bold tracking-tight text-foreground">
+      <div className="flex items-center justify-between px-5 pt-5 pb-4">
+        <h2 className="text-lg font-semibold text-foreground">
           메뉴 상세
         </h2>
         <Badge
           variant={menu.isAvailable ? "default" : "secondary"}
-          className="rounded-full px-3 py-1 text-sm font-semibold"
+          className="rounded-full px-2.5 py-0.5 text-xs font-semibold"
         >
           {menu.isAvailable ? "판매중" : "품절"}
         </Badge>
       </div>
 
       {/* 기본 정보 */}
-      <div className="flex flex-col gap-4 px-5 pb-5">
+      <div className="flex flex-col gap-3 px-5 pb-4">
         {/* 메뉴명 */}
         <div className="flex flex-col gap-0.5">
           <span className="text-xs text-muted-foreground">메뉴명</span>
-          <span className="text-base font-semibold text-foreground">
+          <span className="text-sm font-medium text-foreground">
             {menu.name}
           </span>
         </div>
@@ -85,7 +85,7 @@ export function MenuDetail({
         {/* 기본가격 */}
         <div className="flex flex-col gap-0.5">
           <span className="text-xs text-muted-foreground">기본가격</span>
-          <span className="text-base font-bold text-foreground">
+          <span className="text-sm font-semibold text-foreground">
             {menu.basePrice.toLocaleString()}원
           </span>
         </div>
@@ -109,7 +109,7 @@ export function MenuDetail({
         )}
       </div>
 
-      <Separator />
+      <Separator className="mx-5 w-auto" />
 
       {/* 옵션 그룹 섹션 */}
       <div className="flex flex-col gap-3 px-5 pt-4 pb-6">
@@ -122,7 +122,7 @@ export function MenuDetail({
           </div>
         ) : (
           <>
-            <p className="text-lg font-semibold text-foreground">
+            <p className="text-sm font-semibold text-foreground">
               옵션 그룹 ({optionGroups.length}개)
             </p>
             {optionGroups.length === 0 ? (
@@ -170,11 +170,11 @@ export function MenuDetail({
 
                       {/* 옵션 목록 */}
                       {groupOptions.length > 0 && (
-                        <div className="flex flex-col">
+                        <div className="flex flex-col border-l-2 border-border ml-1 pl-1">
                           {groupOptions.map((opt) => (
                             <div
                               key={opt.id}
-                              className="flex items-center justify-between pl-4 py-1 text-sm"
+                              className="flex items-center justify-between pl-3 py-1 text-sm"
                             >
                               <div className="flex items-center gap-2 min-w-0">
                                 <span className="text-foreground truncate">
