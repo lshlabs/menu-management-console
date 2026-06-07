@@ -16,7 +16,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Home } from "lucide-react"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import type { Store, Menu, OptionGroup, Option, CatalogData } from "@/lib/types"
 import {
   apiGetStores,
@@ -770,16 +769,12 @@ export default function MenuManagementPage() {
           />
 
           {/* Col 4 — 메뉴 상세 패널 (인라인, 상시 노출) */}
-          <div className="flex h-full flex-col overflow-hidden rounded-xl border bg-background shadow-sm">
-            <ScrollArea className="flex-1">
-              <MenuDetail
-                menu={selectedMenu}
-                optionGroups={optionGroups}
-                options={options}
-                linkableMenus={linkableMenus}
-              />
-            </ScrollArea>
-          </div>
+          <MenuDetail
+            menu={selectedMenu}
+            optionGroups={optionGroups}
+            options={options}
+            linkableMenus={linkableMenus}
+          />
         </div>
       </div>
     </div>

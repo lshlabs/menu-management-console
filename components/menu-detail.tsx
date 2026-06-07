@@ -1,6 +1,8 @@
 "use client"
 
 import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import type { Menu, OptionGroup, Option } from "@/lib/types"
 
@@ -34,18 +36,19 @@ export function MenuDetail({
 
   if (!menu) {
     return (
-      <div className="flex items-center justify-center px-6 py-16">
+      <Card className="flex items-center justify-center min-h-[200px]">
         <p className="text-sm text-muted-foreground">
           메뉴를 선택하면 상세 정보가 표시됩니다
         </p>
-      </div>
+      </Card>
     )
   }
 
   const canHaveOptions = menu.type === "MAIN" || menu.type === "SET"
 
   return (
-    <div className="flex flex-col gap-0">
+    <Card className="flex flex-col overflow-hidden">
+      <ScrollArea className="flex-1">
       {/* Header: 타이틀 + 상태 배지 */}
       <div className="flex items-center justify-between px-5 pt-5 pb-4">
         <h2 className="text-lg font-bold tracking-tight text-foreground">
@@ -227,6 +230,7 @@ export function MenuDetail({
           </>
         )}
       </div>
-    </div>
+      </ScrollArea>
+    </Card>
   )
 }
