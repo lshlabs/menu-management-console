@@ -12,8 +12,6 @@ import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog"
 import { Home } from "lucide-react"
 import type { Store, Menu, OptionGroup, Option, CatalogData } from "@/lib/types"
@@ -256,7 +254,7 @@ export default function MenuManagementPage() {
       setMenus((prev) => [...prev, menu])
       toast.success(`"${menu.name}" 메뉴가 생성되었습니다`)
     } catch (error) {
-      toast.error("메����� 생성에 실패했습니다")
+      toast.error("메����� 생성에 실패���습니다")
       console.error(error)
     } finally {
       setIsLoading(false)
@@ -688,23 +686,18 @@ export default function MenuManagementPage() {
             {/* Store picker modal */}
             <Dialog open={storePickerOpen} onOpenChange={setStorePickerOpen}>
               <DialogContent className="max-w-lg gap-0 overflow-hidden p-0">
-                <DialogHeader className="border-b px-6 py-4">
-                  <DialogTitle>매장 선택</DialogTitle>
-                </DialogHeader>
-                <div className="max-h-[70vh] overflow-y-auto">
-                  <StoreManager
-                    stores={stores}
-                    selectedStore={selectedStore}
-                    onSelectStore={(store) => {
-                      setSelectedStore(store)
-                      setStorePickerOpen(false)
-                    }}
-                    onCreateStore={handleCreateStore}
-                    onUpdateStore={handleUpdateStore}
-                    onDeleteStore={handleDeleteStore}
-                    isLoading={isLoading}
-                  />
-                </div>
+                <StoreManager
+                  stores={stores}
+                  selectedStore={selectedStore}
+                  onSelectStore={(store) => {
+                    setSelectedStore(store)
+                    setStorePickerOpen(false)
+                  }}
+                  onCreateStore={handleCreateStore}
+                  onUpdateStore={handleUpdateStore}
+                  onDeleteStore={handleDeleteStore}
+                  isLoading={isLoading}
+                />
               </DialogContent>
             </Dialog>
 
