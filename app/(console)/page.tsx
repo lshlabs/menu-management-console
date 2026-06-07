@@ -713,7 +713,7 @@ export default function MenuManagementPage() {
 
       {/* 4-column drill-down: 메뉴 | 옵션 그룹 | 옵션 | 상세 패널 */}
       <div className="flex-1 px-4 py-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4 items-start">
           {/* Col 1 — 메뉴 목록 */}
           <MenuManager
             menus={menus}
