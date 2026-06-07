@@ -136,54 +136,54 @@ export function MenuDetail({
                   return (
                     <div
                       key={group.id}
-                      className="rounded-xl border bg-background p-4 shadow-sm"
+                      className="rounded-xl border border-border bg-white p-4"
                     >
                       {/* 그룹 헤더 */}
-                      <div className="flex items-center justify-between mb-1.5">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-sm font-semibold text-foreground">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-base font-bold text-foreground">
                             {group.name}
                           </span>
                           <Badge
                             variant="outline"
-                            className="rounded-full px-2 py-0 text-xs font-medium"
+                            className="rounded-full px-2.5 py-0.5 text-xs font-medium"
                           >
                             {group.selectionType === "RADIO" ? "단일" : "다중"}
                           </Badge>
                           {group.isRequired && (
-                            <Badge className="rounded-full px-2 py-0 text-xs font-medium">
+                            <Badge className="rounded-full px-2.5 py-0.5 text-xs font-semibold">
                               필수
                             </Badge>
                           )}
+                          {!group.isAvailable && (
+                            <Badge variant="secondary" className="rounded-full px-2.5 py-0.5 text-xs">
+                              비활성
+                            </Badge>
+                          )}
                         </div>
-                        {!group.isAvailable && (
-                          <Badge variant="secondary" className="text-xs">
-                            비활성
-                          </Badge>
-                        )}
                       </div>
 
                       {/* 선택 범위 */}
-                      <p className="text-xs text-muted-foreground mb-2">
+                      <p className="text-sm text-muted-foreground mb-3">
                         선택: {group.minSelect}~{group.maxSelect}개
                       </p>
 
                       {/* 옵션 목록 */}
                       {groupOptions.length > 0 && (
-                        <div className="flex flex-col gap-1">
+                        <div className="flex flex-col">
                           {groupOptions.map((opt) => (
                             <div
                               key={opt.id}
-                              className="flex items-center justify-between pl-3 py-0.5 text-sm"
+                              className="flex items-center justify-between pl-4 py-1 text-sm"
                             >
-                              <div className="flex items-center gap-1.5 min-w-0">
+                              <div className="flex items-center gap-2 min-w-0">
                                 <span className="text-foreground truncate">
                                   {opt.name}
                                 </span>
                                 {opt.isDefaultSelected && (
                                   <Badge
                                     variant="secondary"
-                                    className="rounded-full px-2 py-0 text-xs shrink-0"
+                                    className="rounded-full px-2.5 py-0.5 text-xs shrink-0"
                                   >
                                     기본
                                   </Badge>
@@ -199,13 +199,13 @@ export function MenuDetail({
                               </div>
                               <div className="flex items-center gap-1.5 shrink-0 pl-2">
                                 {opt.additionalPrice !== 0 && (
-                                  <span className="text-xs text-foreground tabular-nums">
+                                  <span className="text-sm text-foreground tabular-nums">
                                     {opt.additionalPrice > 0 ? "+" : ""}
                                     {opt.additionalPrice.toLocaleString()}원
                                   </span>
                                 )}
                                 {!opt.isAvailable && (
-                                  <Badge variant="secondary" className="text-xs">
+                                  <Badge variant="secondary" className="text-xs rounded-full">
                                     N/A
                                   </Badge>
                                 )}
