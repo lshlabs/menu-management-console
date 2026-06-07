@@ -50,7 +50,7 @@ export function MenuDetail({
     <Card className="flex flex-col overflow-hidden">
       <ScrollArea className="flex-1">
       {/* Header: 타이틀 + 상태 배지 */}
-      <div className="flex items-center justify-between px-5 pt-5 pb-4">
+      <div className="flex items-center justify-between px-5 pt-4 pb-3">
         <h2 className="text-lg font-semibold text-foreground">
           메뉴 상세
         </h2>
@@ -109,7 +109,7 @@ export function MenuDetail({
         )}
       </div>
 
-      <Separator className="mx-5 w-auto" />
+      <div className="px-5"><Separator /></div>
 
       {/* 옵션 그룹 섹션 */}
       <div className="flex flex-col gap-3 px-5 pt-4 pb-6">
