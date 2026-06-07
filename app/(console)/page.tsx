@@ -15,7 +15,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { ChevronRight, Eye, Store as StoreIcon, Home } from "lucide-react"
+import { Home } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import type { Store, Menu, OptionGroup, Option, CatalogData } from "@/lib/types"
 import {
   apiGetStores,
@@ -64,8 +66,8 @@ export default function MenuManagementPage() {
   // Loading state
   const [isLoading, setIsLoading] = useState(false)
 
-  // Menu preview dialog state
-  const [previewOpen, setPreviewOpen] = useState(false)
+  // Store picker modal state
+  const [storePickerOpen, setStorePickerOpen] = useState(false)
 
   // Load stores on mount
   useEffect(() => {
@@ -256,7 +258,7 @@ export default function MenuManagementPage() {
       setMenus((prev) => [...prev, menu])
       toast.success(`"${menu.name}" 메뉴가 생성되었습니다`)
     } catch (error) {
-      toast.error("메��� 생성에 실패했습니다")
+      toast.error("메����� 생성에 실패했습니다")
       console.error(error)
     } finally {
       setIsLoading(false)
@@ -658,141 +660,70 @@ export default function MenuManagementPage() {
     }
   }
 
-  // Breadcrumb navigation: clicking a level clears deeper selections
-  const goToRoot = () => {
-    setSelectedStore(null)
-  }
-  const goToStore = () => {
-    setSelectedMenu(null)
-    setSelectedOptionGroup(null)
-  }
-  const goToMenu = () => {
-    setSelectedOptionGroup(null)
-  }
-
   return (
     <div className="flex min-h-screen flex-col">
       {/* Sticky toolbar */}
       <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-        <div className="flex flex-col gap-3 px-4 py-4 lg:px-8">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h1 className="text-xl font-semibold tracking-tight text-foreground">
-                메뉴 관리
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                매장에서 메뉴, 옵션 그룹, 옵션까지 단계별로 관리하세요
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!selectedMenu}
-                onClick={() => setPreviewOpen(true)}
-                title={
-                  selectedMenu
-                    ? "선택한 메뉴 미리보기"
-                    : "메뉴를 선택하면 미리보기를 볼 수 있습니다"
-                }
-              >
-                <Eye className="mr-2 h-4 w-4" />
-                미리보기
-              </Button>
-              <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-                <DialogContent className="max-w-2xl gap-0 overflow-hidden p-0">
-                  <DialogHeader className="border-b px-6 py-4">
-                    <DialogTitle>메뉴 미리보기</DialogTitle>
-                  </DialogHeader>
-                  <div className="max-h-[70vh] overflow-y-auto scrollbar-hide">
-                    <MenuDetail
-                      menu={selectedMenu}
-                      optionGroups={optionGroups}
-                      options={options}
-                      linkableMenus={linkableMenus}
-                    />
-                  </div>
-                </DialogContent>
-              </Dialog>
-              <JsonImportExport
-                onExport={handleExport}
-                onImport={handleImport}
-                isLoading={isLoading}
-                compact
-              />
-            </div>
+        <div className="flex items-center justify-between gap-3 px-4 py-4 lg:px-8">
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">
+              메뉴 관리
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              매장에서 메뉴, 옵션 그룹, 옵션까지 단계별로 관리하세요
+            </p>
           </div>
-
-          {/* Breadcrumb / drill-down path */}
-          <nav
-            aria-label="탐색 경로"
-            className="flex flex-wrap items-center gap-1 text-sm"
-          >
-            <button
-              type="button"
-              onClick={goToRoot}
-              className="flex items-center gap-1 rounded-md px-2 py-1 font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          <div className="flex items-center gap-2">
+            {/* Store picker button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setStorePickerOpen(true)}
+              className="max-w-[220px]"
             >
-              <Home className="h-3.5 w-3.5" />
-              전체 매장
-            </button>
-            {selectedStore && (
-              <>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                <button
-                  type="button"
-                  onClick={goToStore}
-                  className={`flex items-center gap-1 rounded-md px-2 py-1 transition-colors hover:bg-muted ${
-                    !selectedMenu
-                      ? "font-semibold text-foreground"
-                      : "font-medium text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  <StoreIcon className="h-3.5 w-3.5" />
-                  {selectedStore.name}
-                </button>
-              </>
-            )}
-            {selectedMenu && (
-              <>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                <button
-                  type="button"
-                  onClick={goToMenu}
-                  className={`rounded-md px-2 py-1 transition-colors hover:bg-muted ${
-                    !selectedOptionGroup
-                      ? "font-semibold text-foreground"
-                      : "font-medium text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {selectedMenu.name}
-                </button>
-              </>
-            )}
-            {selectedOptionGroup && (
-              <>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                <span className="rounded-md px-2 py-1 font-semibold text-foreground">
-                  {selectedOptionGroup.name}
-                </span>
-              </>
-            )}
-          </nav>
+              <Home className="mr-2 h-4 w-4 shrink-0" />
+              <span className="truncate">
+                {selectedStore ? selectedStore.name : "매장 선택"}
+              </span>
+            </Button>
+
+            {/* Store picker modal */}
+            <Dialog open={storePickerOpen} onOpenChange={setStorePickerOpen}>
+              <DialogContent className="max-w-lg gap-0 overflow-hidden p-0">
+                <DialogHeader className="border-b px-6 py-4">
+                  <DialogTitle>매장 선택</DialogTitle>
+                </DialogHeader>
+                <div className="max-h-[70vh] overflow-y-auto">
+                  <StoreManager
+                    stores={stores}
+                    selectedStore={selectedStore}
+                    onSelectStore={(store) => {
+                      setSelectedStore(store)
+                      setStorePickerOpen(false)
+                    }}
+                    onCreateStore={handleCreateStore}
+                    onUpdateStore={handleUpdateStore}
+                    onDeleteStore={handleDeleteStore}
+                    isLoading={isLoading}
+                  />
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <JsonImportExport
+              onExport={handleExport}
+              onImport={handleImport}
+              isLoading={isLoading}
+              compact
+            />
+          </div>
         </div>
       </header>
 
-      {/* Drill-down columns: 매장 → 메뉴 → 옵션 그룹 → 옵션 */}
+      {/* 4-column drill-down: 메뉴 | 옵션 그룹 | 옵션 | 상세 패널 */}
       <div className="flex-1 px-4 py-6 lg:px-8">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <StoreManager
-            stores={stores}
-            selectedStore={selectedStore}
-            onSelectStore={setSelectedStore}
-            onCreateStore={handleCreateStore}
-            onUpdateStore={handleUpdateStore}
-            onDeleteStore={handleDeleteStore}
-            isLoading={isLoading}
-          />
+          {/* Col 1 — 메뉴 목록 */}
           <MenuManager
             menus={menus}
             selectedMenu={selectedMenu}
@@ -805,6 +736,8 @@ export default function MenuManagementPage() {
             onReorderMenus={handleReorderMenus}
             isLoading={isLoading}
           />
+
+          {/* Col 2 — 옵션 그룹 */}
           <OptionGroupManager
             optionGroups={optionGroups}
             selectedOptionGroup={selectedOptionGroup}
@@ -817,6 +750,8 @@ export default function MenuManagementPage() {
             onReorderOptionGroups={handleReorderOptionGroups}
             isLoading={isLoading}
           />
+
+          {/* Col 3 — 옵션 목록 */}
           <OptionManager
             options={
               selectedOptionGroup
@@ -834,6 +769,38 @@ export default function MenuManagementPage() {
             onReorderOptions={handleReorderOptions}
             isLoading={isLoading}
           />
+
+          {/* Col 4 — 메뉴 상세 패널 (인라인, 상시 노출) */}
+          <Card className="flex h-full flex-col overflow-hidden rounded-xl border shadow-sm">
+            <CardHeader className="border-b px-4 py-3">
+              <CardTitle className="text-sm font-semibold text-foreground">
+                메뉴 상세
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 p-0">
+              {selectedMenu ? (
+                <ScrollArea className="h-full">
+                  <div className="p-4">
+                    <MenuDetail
+                      menu={selectedMenu}
+                      optionGroups={optionGroups}
+                      options={options}
+                      linkableMenus={linkableMenus}
+                    />
+                  </div>
+                </ScrollArea>
+              ) : (
+                <div className="flex h-full min-h-[200px] flex-col items-center justify-center gap-2 p-6 text-center">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    메뉴를 선택하면
+                  </p>
+                  <p className="text-xs text-muted-foreground/70">
+                    상세 정보가 여기에 표시됩니다
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
